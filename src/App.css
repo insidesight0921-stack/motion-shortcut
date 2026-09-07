@@ -3,6 +3,7 @@
   --bg: #111318;
   --panel: #1b1f27;
   --panel-2: #232936;
+  --border: #2a3040;
   --text: #e8ebf1;
   --muted: #98a2b3;
   --accent: #4f8cff;
@@ -22,6 +23,25 @@ body {
   color: var(--text);
 }
 
+button {
+  font: inherit;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .app {
   min-height: 100vh;
   display: flex;
@@ -33,7 +53,7 @@ body {
   align-items: baseline;
   gap: 12px;
   padding: 12px 20px;
-  border-bottom: 1px solid #2a3040;
+  border-bottom: 1px solid var(--border);
 }
 
 .app-header h1 {
@@ -46,6 +66,93 @@ body {
   font-size: 13px;
 }
 
-.app-main {
-  padding: 20px;
+.layout {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.panel {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.placeholder {
+  color: var(--muted);
+}
+
+/* 카메라 */
+.camera-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.camera-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  /* 거울 모드: 비디오만 뒤집는다. 캔버스는 뒤집지 않는다 (좌표가 이미 사용자 시점). */
+  transform: scaleX(-1);
+}
+
+.camera-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.camera-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  text-align: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.camera-error {
+  color: var(--danger);
+}
+
+.camera-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  font-size: 13px;
+}
+
+.camera-stat {
+  color: var(--muted);
+}
+
+.camera-stat.is-on {
+  color: var(--ok);
+}
+
+.camera-hint {
+  color: var(--muted);
+  margin-left: auto;
+  font-size: 12px;
 }
