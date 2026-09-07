@@ -65,3 +65,12 @@ docs/
 - `main` 보호. 작업은 `feat/<주제>` → PR → 리뷰 후 머지.
 - 커밋은 기능 단위로 작게. 커밋 전 `pnpm test`와 `pnpm build` 통과 확인.
 - 테스트하지 않은 것을 "테스트 완료"라고 쓰지 않는다. 카메라 실기 확인 항목은 PR 본문에 목록으로 적는다.
+
+## 작업 시 규칙 (Claude Code용)
+
+- 임계값을 바꿀 때는 `config.ts`의 `DEFAULT_CONFIG`와 `CONFIG_RANGES`를 함께 고치고, `docs/GESTURES.md`의 표도 갱신한다. 새 키를 추가하면 `config.test.ts`가 범위 누락을 잡는다.
+- 새 판정 규칙을 넣으면 `src/gesture/__tests__/fixtures.ts`의 합성 손으로 테스트를 먼저 쓴다. 테스트가 실패하면 코드와 픽스처 둘 다 의심한다(T-002).
+- 좌우 방향 버그는 임계값으로 고치지 않는다. `vision/mirror.ts`가 유일한 반전 지점인지부터 확인한다(D-003).
+- 기술 결정을 내리면 `docs/DECISIONS.md`에 "결정 / 대안 / 선택 이유 / 되돌릴 조건"으로 적고, 막혔다 풀린 것은 "시행착오"에 적는다.
+- `@mediapipe/tasks-vision` API를 새로 쓸 때는 `node_modules/@mediapipe/tasks-vision/vision.d.ts`를 읽고 쓴다. 문서보다 설치된 타입이 기준이다.
+- 다른 브라우저 포트가 5173을 쓰면 `PORT=5174 pnpm dev`. `.claude/launch.json`은 Claude Code 브라우저 미리보기용이다.
