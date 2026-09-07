@@ -156,3 +156,111 @@ button:disabled {
   margin-left: auto;
   font-size: 12px;
 }
+
+/* HUD */
+.hud {
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 8px 16px;
+  align-items: center;
+  transition: border-color 150ms;
+}
+
+.hud-armed {
+  border-color: var(--warn);
+}
+
+.hud-cooldown {
+  border-color: #3a4256;
+}
+
+.hud-badge {
+  grid-column: 1 / -1;
+  justify-self: start;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  letter-spacing: 0.02em;
+}
+
+.hud-badge.is-on {
+  background: rgba(56, 193, 114, 0.15);
+  color: var(--ok);
+  border: 1px solid rgba(56, 193, 114, 0.5);
+}
+
+.hud-badge.is-off {
+  background: rgba(239, 83, 80, 0.12);
+  color: var(--danger);
+  border: 1px solid rgba(239, 83, 80, 0.5);
+}
+
+.hud-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.hud-ring {
+  width: 64px;
+  height: 64px;
+  transform: rotate(-90deg);
+}
+
+.hud-ring circle {
+  fill: none;
+  stroke-width: 6;
+}
+
+.hud-ring-track {
+  stroke: #2f3746;
+}
+
+.hud-ring-progress {
+  stroke: var(--accent);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 60ms linear;
+}
+
+.hud-armed .hud-ring-progress {
+  stroke: var(--warn);
+}
+
+.hud-ring-cooldown {
+  stroke: #566178;
+  stroke-linecap: round;
+}
+
+.hud-phase {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.hud-candidate {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.hud-stats {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 2px 10px;
+  font-size: 12px;
+  align-self: start;
+}
+
+.hud-stats dt {
+  color: var(--muted);
+}
+
+.hud-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}

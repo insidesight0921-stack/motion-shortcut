@@ -31,6 +31,13 @@ export interface GestureConfig {
   fistHoldMs: number;
   /** 유지 중 포즈가 잠깐 끊겨도 허용하는 시간 */
   holdGraceMs: number;
+  /**
+   * 정적 포즈 유지 중 허용하는 손목 최대 속도 (손 크기/초).
+   * 이보다 빠르면 "지나가는 손"으로 보고 유지 시간을 누적하지 않는다 (손바닥 스와이프가 재생 토글로 잡히는 것 방지).
+   */
+  holdMaxSpeed: number;
+  /** 속도 계산 창 */
+  motionWindowMs: number;
 
   /** "실행 예정" 표시 시간 */
   armDurationMs: number;
@@ -71,6 +78,8 @@ export const DEFAULT_CONFIG: GestureConfig = {
   palmHoldMs: 500,
   fistHoldMs: 2000,
   holdGraceMs: 150,
+  holdMaxSpeed: 1.5,
+  motionWindowMs: 150,
 
   armDurationMs: 200,
   cooldownMs: 1500,
@@ -99,6 +108,8 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   palmHoldMs: { min: 100, max: 2000, step: 50, label: '손바닥 유지(ms)' },
   fistHoldMs: { min: 500, max: 4000, step: 100, label: '주먹 유지(ms)' },
   holdGraceMs: { min: 0, max: 500, step: 10, label: '유지 유예(ms)' },
+  holdMaxSpeed: { min: 0.2, max: 10, step: 0.1, label: '유지 중 최대 속도(손 크기/초)' },
+  motionWindowMs: { min: 50, max: 500, step: 10, label: '속도 계산 창(ms)' },
   armDurationMs: { min: 0, max: 1000, step: 50, label: '실행 예정 표시(ms)' },
   cooldownMs: { min: 0, max: 5000, step: 100, label: '쿨다운(ms)' },
   swipeWindowMs: { min: 200, max: 1500, step: 50, label: '스와이프 창(ms)' },

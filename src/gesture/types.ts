@@ -33,6 +33,15 @@ export function isStaticGesture(g: GestureId): g is StaticPose {
   return g === 'open_palm' || g === 'fist';
 }
 
+/** 동적 제스처 판정 결과 (dynamic.ts가 생성) */
+export interface DynamicResult {
+  gesture: DynamicGesture;
+  /** 0~1 자체 판정 점수 */
+  score: number;
+  /** 디버그용 세부 수치 (dx, dy, totalAngleDeg, radiusCv 등) */
+  detail: Record<string, number>;
+}
+
 /** 랜드마크 인덱스 (MediaPipe Hand 21점 모델) */
 export const LM = {
   WRIST: 0,
