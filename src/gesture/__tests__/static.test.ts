@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../config';
 import { normalizeHand } from '../normalize';
-import { classifyStaticPose, fingerStates } from '../static';
+import { classifyStaticPose, fingerStates, poseScore } from '../static';
 import type { Point } from '../types';
 import { fistHand, makeHand, mirrorHand, openHand, pointingHand, rotateHand, transformHand } from './fixtures';
 
@@ -22,6 +22,32 @@ describe('fingerStates', () => {
   it('검지만 편 손은 검지만 펼침', () => {
     const f = fingerStates(normalizeHand(pointingHand()).points, cfg);
     expect([f.thumb, f.index, f.middle, f.ring, f.pinky]).toEqual([false, true, false, false, false]);
+  });
+});
+
+describe('poseScore (T-004)', () => {
+  const soft = 0.08;
+
+  it('모든 손가락이 경계(마진 0)면 0.5', () => {
+    expect(poseScore([0, 0, 0, 0, 0], soft)).toBeCloseTo(0.5);
+  });
+
+  it('모든 손가락이 soft 이상 여유면 1.0', () => {
+    expect(poseScore([0.08, 0.1, 0.2, 0.3, 0.5], soft)).toBeCloseTo(1);
+  });
+
+  it('마진이 soft의 절반이면 0.75', () => {
+    expect(poseScore([0.04, 0.04, 0.04, 0.04], soft)).toBeCloseTo(0.75);
+  });
+
+  it('손가락 하나만 경계고 나머지가 확실하면 0.8 이상 (최솟값 방식이었다면 0.5)', () => {
+    expect(poseScore([0, 0.2, 0.2, 0.2, 0.2], soft)).toBeCloseTo(0.9);
+    expect(poseScore([0, 0.2, 0.2, 0.2, 0.2], soft)).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it('음수 마진(경계 아래)은 0.5 아래로 끌어내린다', () => {
+    expect(poseScore([-0.08, 0.2, 0.2, 0.2], soft)).toBeCloseTo(0.75);
+    expect(poseScore([-0.5], soft)).toBe(0);
   });
 });
 
@@ -73,6 +99,25 @@ describe('classifyStaticPose', () => {
     expect(classify(mirrorHand(openHand())).pose).toBe('open_palm');
     expect(classify(mirrorHand(fistHand())).pose).toBe('fist');
     expect(classify(mirrorHand(makeHand({ thumb: 'folded' }))).pose).toBeNull();
+  });
+
+  it('확실한 손바닥·주먹은 0.8 이상 (T-004)', () => {
+    expect(classify(openHand()).score).toBeGreaterThanOrEqual(0.8);
+    expect(classify(fistHand()).score).toBeGreaterThanOrEqual(0.8);
+  });
+
+  it('마진 원값이 결과에 포함된다 (개발 패널용)', () => {
+    const r = classify(openHand());
+    for (const k of ['index', 'middle', 'ring', 'pinky', 'thumb'] as const) {
+      expect(r.margins.extend[k]).toBeGreaterThan(0);
+    }
+    expect(r.margins.extend.index).toBeCloseTo(r.fingers.ratios.index - cfg.fingerExtendRatio, 6);
+    expect(r.margins.extend.thumb).toBeCloseTo(r.fingers.thumbMargin - cfg.thumbExtendMargin, 6);
+    const f = classify(fistHand());
+    for (const k of ['index', 'middle', 'ring', 'pinky'] as const) {
+      expect(f.margins.fold[k]).toBeGreaterThan(0);
+      expect(f.margins.fold[k]).toBeCloseTo(cfg.fingerFoldRatio - f.fingers.ratios[k], 6);
+    }
   });
 
   it('점수는 손가락이 임계값에 가까울수록 낮아진다', () => {

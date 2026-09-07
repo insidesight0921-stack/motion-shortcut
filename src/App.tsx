@@ -64,11 +64,12 @@ export default function App() {
           result: 'ignored',
           reason: e.reason ? IGNORE_REASON_LABEL[e.reason] : undefined,
           note:
-            e.progress !== undefined && e.progress > 0
+            e.detail ??
+            (e.progress !== undefined && e.progress > 0
               ? `진행 ${Math.round(e.progress * 100)}%`
               : e.score !== undefined
                 ? `점수 ${e.score.toFixed(2)}`
-                : undefined,
+                : undefined),
         });
       }
     },

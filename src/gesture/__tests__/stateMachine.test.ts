@@ -115,6 +115,63 @@ describe('신뢰도', () => {
     expect(r.executed).toEqual([]);
     expect(ignoredReasons(r.events)).toContain('low_confidence');
   });
+
+  it('사유 상세에 어떤 점수가 어떤 임계값에 미달했는지 적힌다 (T-005)', () => {
+    const ignoredEvents = (events: GestureEvent[]) => events.filter((e) => e.type === 'ignored');
+    const pose = run(createInitialState(), 0, 100, { pose: 'open_palm', score: 0.3 });
+    expect(ignoredEvents(pose.events)[0].detail).toBe(`pose 0.30 < ${cfg.minPoseScore.toFixed(2)}`);
+
+    // 실기 로그 사례: 동적 점수 0.82인데 거부 → 손 점수가 원인이었음을 상세에서 알 수 있어야 한다
+    const strict = { ...cfg, minHandScore: 0.6 };
+    const dyn = run(createInitialState(), 0, 100, { dynamic: { ...swipeRight, gesture: 'swipe_left', score: 0.82 }, handScore: 0.55 }, strict);
+    expect(dyn.executed).toEqual([]);
+    expect(ignoredEvents(dyn.events)[0].detail).toBe('hand 0.55 < 0.60');
+
+    const both = run(createInitialState(), 0, 100, { dynamic: { ...swipeRight, score: 0.4 }, handScore: 0.55 }, strict);
+    expect(ignoredEvents(both.events)[0].detail).toBe(`hand 0.55 < 0.60, dynamic 0.40 < ${cfg.minDynamicScore.toFixed(2)}`);
+  });
+
+  it('기본 minHandScore(0.5)에서는 handedness 0.55, 동적 0.82인 스와이프가 실행된다 (T-005)', () => {
+    const r = run(createInitialState(), 0, 400, { dynamic: { ...swipeRight, gesture: 'swipe_left', score: 0.82 }, handScore: 0.55 });
+    expect(r.executed).toEqual(['swipe_left']);
+  });
+});
+
+describe('무시 로그 스로틀 (T-006)', () => {
+  it('같은 (제스처, 사유)는 ignoreLogThrottleMs 안에 한 번만 기록된다', () => {
+    // 쿨다운 중에 점수가 프레임마다 0.9 ↔ 0.3으로 흔들리면 에피소드 키가 매 프레임 바뀌어
+    // 'cooldown'과 'low_confidence'가 번갈아 찍히던 실기 사례
+    const a = run(createInitialState(), 0, 800, { pose: 'open_palm' });
+    expect(a.state.phase).toBe('cooldown');
+    let s = a.state;
+    const events: GestureEvent[] = [];
+    let t = a.tEnd + FPS_MS;
+    for (let i = 0; i < 30; i++, t += FPS_MS) {
+      const r = step(s, obs(t, { pose: 'fist', score: i % 2 === 0 ? 0.9 : 0.3 }), cfg);
+      s = r.state;
+      events.push(...r.events);
+    }
+    const ignored = events.filter((e) => e.type === 'ignored');
+    const byKey = new Map<string, number[]>();
+    for (const e of ignored) {
+      const k = `${e.gesture}:${e.reason}`;
+      byKey.set(k, [...(byKey.get(k) ?? []), e.t]);
+    }
+    expect([...byKey.keys()].sort()).toEqual(['fist:cooldown', 'fist:low_confidence']);
+    for (const times of byKey.values()) {
+      for (let i = 1; i < times.length; i++) expect(times[i] - times[i - 1]).toBeGreaterThanOrEqual(cfg.ignoreLogThrottleMs);
+    }
+    // 30프레임(약 1초) 동안 키당 최대 3건
+    expect(ignored.length).toBeLessThanOrEqual(6);
+  });
+
+  it('후보가 사라졌다가 스로틀 시간 뒤 다시 나타나면 다시 기록된다', () => {
+    const a = run(createInitialState(), 0, 200, { pose: 'open_palm', score: 0.3 });
+    expect(ignoredReasons(a.events)).toEqual(['low_confidence']);
+    const gap = run(a.state, a.tEnd + FPS_MS, cfg.ignoreLogThrottleMs + 100, { pose: null });
+    const b = run(gap.state, gap.tEnd + FPS_MS, 100, { pose: 'open_palm', score: 0.3 });
+    expect(ignoredReasons(b.events)).toEqual(['low_confidence']);
+  });
 });
 
 describe('활성화 on/off', () => {
@@ -137,7 +194,7 @@ describe('활성화 on/off', () => {
 
   it('후보가 사라졌다 다시 나타나면 disabled 로그가 다시 남는다', () => {
     const a = run(createInitialState(), 0, 300, { pose: 'open_palm', enabled: false });
-    const gap = run(a.state, a.tEnd + FPS_MS, 200, { pose: null, enabled: false });
+    const gap = run(a.state, a.tEnd + FPS_MS, cfg.ignoreLogThrottleMs + 50, { pose: null, enabled: false });
     const b = run(gap.state, gap.tEnd + FPS_MS, 300, { pose: 'open_palm', enabled: false });
     expect(ignoredReasons([...a.events, ...b.events])).toEqual(['disabled', 'disabled']);
   });
@@ -159,15 +216,28 @@ describe('쿨다운과 재실행 방지', () => {
     expect(b.executed).toEqual(['swipe_right']);
   });
 
-  it('같은 제스처가 계속 보이면 쿨다운이 연장된다', () => {
+  it('같은 제스처가 계속 보여도 쿨다운은 연장되지 않는다 (T-003)', () => {
     const a = run(createInitialState(), 0, 800, { pose: 'open_palm' });
     const execAt = a.state.lastExecutedAt;
-    // 실행 후 3초 동안 손바닥을 계속 들고 있음 (기본 쿨다운 1.5초보다 김)
     const hold = run(a.state, a.tEnd + FPS_MS, 3000, { pose: 'open_palm' });
+    expect(hold.executed).toEqual([]); // release 규칙으로 재실행은 없지만
+    expect(hold.state.phase).toBe('idle'); // 쿨다운은 정상 만료
+    expect(hold.state.cooldownUntil).toBe(execAt + cfg.cooldownMs);
+  });
+
+  it('open_palm 실행 후 손을 편 채 1.6초 뒤 swipe_right는 실행된다 (T-003 실기 사례)', () => {
+    const a = run(createInitialState(), 0, 800, { pose: 'open_palm' });
+    expect(a.executed).toEqual(['open_palm']);
+    const execAt = a.state.lastExecutedAt;
+    // 손바닥 포즈가 계속 관측되는 채로 1.6초 경과
+    const hold = run(a.state, a.tEnd + FPS_MS, execAt + 1600 - a.tEnd, { pose: 'open_palm' });
     expect(hold.executed).toEqual([]);
-    expect(hold.state.phase).toBe('cooldown');
-    expect(hold.state.cooldownUntil).toBeGreaterThan(execAt + cfg.cooldownMs);
-    expect(hold.state.cooldownUntil).toBeGreaterThanOrEqual(hold.tEnd + cfg.cooldownMs - FPS_MS);
+    // 손을 편 채 오른쪽 스와이프 (정적 후보 open_palm + 동적 후보 swipe_right 동시 관측)
+    const swipe = run(hold.state, hold.tEnd + FPS_MS, 400, { pose: 'open_palm', dynamic: swipeRight });
+    expect(swipe.executed).toEqual(['swipe_right']);
+    // 실행 전까지는 쿨다운 무시가 없어야 한다 (실행 뒤 남은 프레임의 cooldown 무시는 정상)
+    const execIdx = swipe.events.findIndex((e) => e.type === 'executed');
+    expect(ignoredReasons(swipe.events.slice(0, execIdx))).not.toContain('cooldown');
   });
 
   it('손바닥을 계속 들고 있으면 재실행되지 않고, 놓았다 다시 들면 실행된다', () => {

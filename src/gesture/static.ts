@@ -24,15 +24,38 @@ export interface FingerStates {
   thumbMargin: number;
 }
 
+export type MarginName = FingerName | 'thumb';
+
 export interface StaticPoseResult {
   pose: StaticPose | null;
-  /** 0~1. 임계값에 딱 걸치면 0.5, poseSoftMargin만큼 여유 있으면 1 */
+  /** 0~1. 모든 손가락이 임계값에 딱 걸치면 0.5, 모두 poseSoftMargin 이상 여유 있으면 1 */
   score: number;
   fingers: FingerStates;
+  /**
+   * 임계값 대비 원값 마진 (손 크기 배수). 양수 = 임계값을 넘음.
+   * extend: ratio − fingerExtendRatio (엄지는 thumbMargin − thumbExtendMargin)
+   * fold:   fingerFoldRatio − ratio (엄지 없음)
+   * 개발 패널에서 실기 보정에 쓴다 (T-004).
+   */
+  margins: { extend: Record<MarginName, number>; fold: Record<FingerName, number> };
 }
 
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
+}
+
+/**
+ * 포즈 점수: 손가락별 마진을 poseSoftMargin으로 정규화해 0.5 + 0.5·(m/soft)로 만들고(0~1로 자름) **평균**한다.
+ * - 모든 손가락이 경계(m=0) → 0.5, 모두 m ≥ soft → 1.0, 절반이 경계·절반이 확실 → 0.75
+ * - 이전에는 최솟값을 썼는데, 실기에서 손가락 하나만 경계에 걸려도 전체가 0.5로 떨어져 확실한 손바닥이 거부됐다 (T-004).
+ *   예/아니오 게이트(모든 손가락이 임계값 통과)는 그대로이므로 평균은 "얼마나 확실한가"만 표현한다.
+ */
+export function poseScore(margins: number[], soft: number): number {
+  if (margins.length === 0) return 0;
+  const s = soft > 1e-6 ? soft : 1e-6;
+  let sum = 0;
+  for (const m of margins) sum += clamp01(0.5 + 0.5 * (m / s));
+  return sum / margins.length;
 }
 
 /**
@@ -94,21 +117,33 @@ export function isPointingPose(norm: Point[], cfg: GestureConfig): boolean {
  */
 export function classifyStaticPose(norm: Point[], cfg: GestureConfig): StaticPoseResult {
   const fingers = fingerStates(norm, cfg);
-  const soft = cfg.poseSoftMargin;
   const names: FingerName[] = ['index', 'middle', 'ring', 'pinky'];
+
+  const extend: Record<MarginName, number> = {
+    index: fingers.ratios.index - cfg.fingerExtendRatio,
+    middle: fingers.ratios.middle - cfg.fingerExtendRatio,
+    ring: fingers.ratios.ring - cfg.fingerExtendRatio,
+    pinky: fingers.ratios.pinky - cfg.fingerExtendRatio,
+    thumb: fingers.thumbMargin - cfg.thumbExtendMargin,
+  };
+  const fold: Record<FingerName, number> = {
+    index: cfg.fingerFoldRatio - fingers.ratios.index,
+    middle: cfg.fingerFoldRatio - fingers.ratios.middle,
+    ring: cfg.fingerFoldRatio - fingers.ratios.ring,
+    pinky: cfg.fingerFoldRatio - fingers.ratios.pinky,
+  };
+  const margins = { extend, fold };
 
   const allExtended = names.every((n) => fingers[n]) && fingers.thumb;
   if (allExtended) {
-    const confs = names.map((n) => clamp01(0.5 + (fingers.ratios[n] - cfg.fingerExtendRatio) / (2 * soft)));
-    confs.push(clamp01(0.5 + (fingers.thumbMargin - cfg.thumbExtendMargin) / (2 * soft)));
-    return { pose: 'open_palm', score: Math.min(...confs), fingers };
+    const ms = [...names.map((n) => extend[n]), extend.thumb];
+    return { pose: 'open_palm', score: poseScore(ms, cfg.poseSoftMargin), fingers, margins };
   }
 
-  const allFolded = names.every((n) => fingers.ratios[n] <= cfg.fingerFoldRatio);
+  const allFolded = names.every((n) => fold[n] >= 0);
   if (allFolded) {
-    const confs = names.map((n) => clamp01(0.5 + (cfg.fingerFoldRatio - fingers.ratios[n]) / (2 * soft)));
-    return { pose: 'fist', score: Math.min(...confs), fingers };
+    return { pose: 'fist', score: poseScore(names.map((n) => fold[n]), cfg.poseSoftMargin), fingers, margins };
   }
 
-  return { pose: null, score: 0, fingers };
+  return { pose: null, score: 0, fingers, margins };
 }

@@ -31,14 +31,15 @@
 ### 손바닥 펼치기 `open_palm`
 
 - 조건: 엄지 포함 5개 모두 펼침
-- 점수: 손가락별로 `0.5 + (r − fingerExtendRatio) / (2·poseSoftMargin)`을 0~1로 자르고, 엄지는 마진으로 같은 식. 다섯 값 중 **최솟값**이 포즈 점수.
-- 상태 머신에서 `score ≥ minPoseScore`(0.6)이어야 후보로 인정. 즉 기본값 기준 모든 손가락이 임계값보다 0.03 이상 여유 있어야 한다.
+- 점수: 손가락별 마진 `m = r − fingerExtendRatio`(엄지는 `thumbMargin − thumbExtendMargin`)를 `0.5 + 0.5·(m / poseSoftMargin)`으로 바꿔 0~1로 자르고 다섯 값을 **평균**한다(T-004). 모두 경계면 0.5, 모두 마진 ≥ `poseSoftMargin`(0.08)이면 1.0, 하나만 경계고 나머지가 확실하면 0.9.
+- 상태 머신에서 `score ≥ minPoseScore`(0.6)이어야 후보로 인정.
+- 개발 패널 "펼침 마진" 줄이 이 `m`의 원값이다. 어느 손가락이 0 근처인지 보고 튜닝한다.
 - 유지 시간: `palmHoldMs` 500ms
 
 ### 주먹 `fist`
 
 - 조건: 엄지 **제외** 4개 모두 접힘(`r ≤ fingerFoldRatio`). 엄지는 밖에 있든(따봉) 안에 있든 무관.
-- 점수: `0.5 + (fingerFoldRatio − r) / (2·poseSoftMargin)`의 최솟값.
+- 점수: 마진 `fingerFoldRatio − r`로 손바닥과 같은 식(평균). 개발 패널 "접힘 마진" 줄이 원값.
 - 유지 시간: `fistHoldMs` 2000ms. 비활성 상태에서도 항상 인식된다(잠금 해제 경로).
 
 ### 검증된 것 / 안 된 것
@@ -95,13 +96,14 @@
 | `idle` | 후보 없음 | 정적 포즈(점수 통과) → `holding` / 동적 제스처 → `armed` |
 | `holding` | 정적 포즈 유지 중. HUD에 진행 링 | 유지 시간 충족 → `armed` / 포즈·손 소실이 `holdGraceMs` 초과 → `idle` + `ignored` / 동적 제스처 감지 → `cancelled` 후 `armed` |
 | `armed` | "실행 예정" 표시 | `armDurationMs` 경과 → 실행(`executed` 이벤트) → `cooldown` |
-| `cooldown` | `cooldownMs` 동안 모든 후보 무시 | 만료 → `idle`. 마지막 실행 제스처가 계속 보이면 만료 시각을 `t + cooldownMs`로 계속 미룸 |
+| `cooldown` | `cooldownMs` 동안 모든 후보 무시 | 만료 → `idle`. 같은 제스처가 보여도 연장하지 않는다(T-003) |
 
 기획서 7단계 대응: 1 후보 발견=`idle→holding/armed`, 2 유지·궤적=`holding`/`dynamic.ts`, 3 신뢰도=매 틱 `handScore ≥ minHandScore` 및 `poseScore ≥ minPoseScore`, 4 재실행 방지=쿨다운 연장 + release 규칙, 5 실행 예정=`armed`, 6 실행=`executed` 이벤트, 7=`cooldown`.
 
 ### 추가 규칙
 
-- **release 규칙**: 정적 제스처(손바닥, 주먹)는 실행 후 그 포즈가 아닌 관측이 한 번은 있어야 다시 후보가 된다. 쿨다운을 0으로 내려도 손바닥을 계속 들고 있는 동안 재생/일시정지가 반복되지 않는다. 위반 시 `ignored:needs_release`.
+- **release 규칙**: 정적 제스처(손바닥, 주먹)는 실행 후 그 포즈가 아닌 관측이 한 번은 있어야 다시 후보가 된다. 쿨다운을 0으로 내려도 손바닥을 계속 들고 있는 동안 재생/일시정지가 반복되지 않는다. 위반 시 `ignored:needs_release`. 재실행 방지는 이 규칙 하나가 맡는다(쿨다운 연장 규칙은 손을 편 채 스와이프할 때 쿨다운이 끝나지 않아 제거, T-003).
+- **로그 스로틀**: 같은 (제스처, 사유)의 `ignored`는 에피소드당 1회에 더해 `ignoreLogThrottleMs`(500ms) 안에 다시 남기지 않는다(T-006).
 - **속도 제한**: `holding` 중 손목 속도가 `holdMaxSpeed`(1.5 손 크기/초)를 넘으면 유지 시간이 쌓이지 않는다. 손바닥을 편 채 스와이프할 때 재생 토글이 먼저 발동하는 것을 막는다. 초과 시 `ignored:moving`.
 - **동적 우선**: `holding` 중 동적 제스처가 감지되면 유지를 취소(`cancelled`)하고 동적 제스처를 실행한다.
 - **fist 예외**: 활성화가 꺼져 있어도 `fist`는 항상 처리된다. 다른 4개는 `ignored:disabled`.
@@ -117,7 +119,7 @@
 | `moving` | 유지 중 손이 너무 빨리 움직임 | 정지한 손인데도 나오면 `holdMaxSpeed` 증가 |
 | `cooldown` | 쿨다운 중 다른 후보 | 의도된 무시. 답답하면 `cooldownMs` 감소 |
 | `disabled` | 비활성 상태에서 fist 외 제스처 | 의도된 무시 |
-| `low_confidence` | 손 또는 포즈 점수 미달 | `minPoseScore` 감소 또는 `poseSoftMargin` 증가 |
+| `low_confidence` | 손·포즈·동적 점수 중 하나가 미달. 비고에 `hand 0.55 < 0.60`처럼 어떤 점수가 어떤 임계값에 걸렸는지 적힘(T-005) | `hand`면 `minHandScore`(handedness 확률이라 0.5가 사실상 통과), `pose`면 개발 패널의 손가락 마진을 보고 `poseSoftMargin`·`fingerExtendRatio`, `dynamic`이면 `minDynamicScore` |
 | `needs_release` | 정적 제스처 실행 후 포즈를 풀지 않음 | 의도된 무시 |
 
 ### 임계값 (초기값)
@@ -131,8 +133,10 @@
 | `motionWindowMs` | 150 | 속도 계산 창 |
 | `armDurationMs` | 200 | 실행 예정 표시 |
 | `cooldownMs` | 1500 | 쿨다운 |
-| `minHandScore` | 0.6 | 손 신뢰도 하한 |
-| `minPoseScore` | 0.6 | 포즈·동적 점수 하한 |
+| `ignoreLogThrottleMs` | 500 | 같은 (제스처, 사유) 무시 로그 최소 간격 |
+| `minHandScore` | 0.5 | 손 신뢰도(handedness 확률) 하한. 구조상 ≥0.5라 0.5는 통과(T-005) |
+| `minPoseScore` | 0.6 | 정적 포즈 점수 하한 |
+| `minDynamicScore` | 0.5 | 동적 제스처 점수 하한 |
 
 ## 알려진 오작동 사례
 

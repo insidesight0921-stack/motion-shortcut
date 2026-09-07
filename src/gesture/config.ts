@@ -45,6 +45,8 @@ export interface GestureConfig {
   armDurationMs: number;
   /** 실행 후 쿨다운 */
   cooldownMs: number;
+  /** 같은 (제스처, 사유)의 ignored 로그를 이 시간 안에 다시 남기지 않는다 */
+  ignoreLogThrottleMs: number;
 
   /** 동적 제스처 창 안에서 프레임 간 간격이 이 값을 넘으면 추적 끊김으로 보고 무효 */
   trackingMaxGapMs: number;
@@ -81,14 +83,17 @@ export interface GestureConfig {
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
-  minHandScore: 0.6,
+  // handedness score는 "왼손/오른손 분류 확률"이라 구조상 0.5 이상이다. 0.6은 손 신뢰도가 아니라
+  // 손 방향이 애매한 프레임을 버리는 셈이 되어 스와이프가 통째로 거부됐다 (T-005). 0.5 = 사실상 통과.
+  minHandScore: 0.5,
   minPoseScore: 0.6,
   minDynamicScore: 0.5,
 
   fingerExtendRatio: 1.05,
   fingerFoldRatio: 0.95,
   thumbExtendMargin: 0.1,
-  poseSoftMargin: 0.15,
+  // 실기에서 확실한 손바닥·주먹도 0.5~0.6에 몰려 0.15 → 0.08로 좁힘. 마진 0.04면 0.75, 0.08이면 1.0 (T-004)
+  poseSoftMargin: 0.08,
 
   palmHoldMs: 500,
   fistHoldMs: 2000,
@@ -98,6 +103,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
 
   armDurationMs: 200,
   cooldownMs: 1500,
+  ignoreLogThrottleMs: 500,
 
   trackingMaxGapMs: 150,
 
@@ -133,6 +139,7 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   motionWindowMs: { min: 50, max: 500, step: 10, label: '속도 계산 창(ms)' },
   armDurationMs: { min: 0, max: 1000, step: 50, label: '실행 예정 표시(ms)' },
   cooldownMs: { min: 0, max: 5000, step: 100, label: '쿨다운(ms)' },
+  ignoreLogThrottleMs: { min: 0, max: 3000, step: 50, label: '무시 로그 간격(ms)' },
   trackingMaxGapMs: { min: 50, max: 500, step: 10, label: '추적 끊김 허용(ms)' },
   swipeWindowMs: { min: 200, max: 1500, step: 50, label: '스와이프 창(ms)' },
   swipeMinDurationMs: { min: 0, max: 500, step: 10, label: '스와이프 최소 지속(ms)' },

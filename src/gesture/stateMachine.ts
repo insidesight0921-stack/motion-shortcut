@@ -7,7 +7,7 @@ import { isStaticGesture, type DynamicResult, type GestureId, type StaticPose } 
  *   1 후보 발견        idle → holding(정적) / armed(동적)
  *   2 유지·궤적 확인   holding에서 유지 시간 누적 / 동적은 dynamic.ts가 궤적 조건을 이미 확인
  *   3 신뢰도 확인      매 틱 handScore ≥ minHandScore, poseScore ≥ minPoseScore (미달 → ignored:low_confidence)
- *   4 재실행 방지      cooldown 중 같은 제스처가 보이면 쿨다운 연장, 정적 제스처는 release 전 재무장 불가
+ *   4 재실행 방지      정적 제스처는 release(포즈를 한 번 풀기) 전 재무장 불가. (쿨다운 연장 규칙은 T-003으로 제거)
  *   5 실행 예정 표시   armed (armDurationMs 동안)
  *   6 실행             executed 이벤트 (UI가 이펙트·효과음·명령 실행)
  *   7 쿨다운           cooldown (cooldownMs)
@@ -60,6 +60,8 @@ export interface GestureEvent {
   progress?: number;
   score?: number;
   reason?: IgnoreReason;
+  /** 사유 상세. low_confidence면 어떤 점수가 어떤 임계값에 미달했는지 (예: "hand 0.55 < 0.60") */
+  detail?: string;
 }
 
 export interface MachineState {
@@ -77,6 +79,8 @@ export interface MachineState {
   /** ignored 로그 중복 방지 키 (정적/동적 따로). 후보가 사라지면 초기화 */
   ignoredStaticKey: string | null;
   ignoredDynamicKey: string | null;
+  /** (제스처:사유) 별 마지막 ignored 기록 시각. ignoreLogThrottleMs 안에는 다시 기록하지 않는다 (T-006) */
+  ignoredAt: Record<string, number>;
 }
 
 export function createInitialState(): MachineState {
@@ -93,6 +97,7 @@ export function createInitialState(): MachineState {
     releasedSinceExec: true,
     ignoredStaticKey: null,
     ignoredDynamicKey: null,
+    ignoredAt: {},
   };
 }
 
@@ -115,6 +120,7 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
 
   const ignore = (gesture: GestureId, reason: IgnoreReason, extra: Partial<GestureEvent> = {}) => {
     const key = `${gesture}:${reason}`;
+    // 1) 같은 에피소드(후보가 계속 보이는 동안) 같은 사유는 한 번만
     if (isStaticGesture(gesture)) {
       if (s.ignoredStaticKey === key) return;
       s.ignoredStaticKey = key;
@@ -122,6 +128,10 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
       if (s.ignoredDynamicKey === key) return;
       s.ignoredDynamicKey = key;
     }
+    // 2) 에피소드가 점수 흔들림으로 매 프레임 리셋되더라도 같은 (제스처, 사유)는 throttle 안에 한 번만 (T-006)
+    const last = s.ignoredAt[key];
+    if (last !== undefined && t - last < cfg.ignoreLogThrottleMs) return;
+    s.ignoredAt = { ...s.ignoredAt, [key]: t };
     events.push({ t, type: 'ignored', gesture, reason, ...extra });
   };
 
@@ -129,6 +139,14 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
   const poseScore = obs.staticPose?.score ?? 0;
   const handOk = obs.handScore !== null && obs.handScore >= cfg.minHandScore;
   const allowed = (g: GestureId) => obs.enabled || g === 'fist';
+  const fmt = (v: number) => v.toFixed(2);
+  /** 어떤 점수가 어떤 임계값에 미달했는지 (로그용) */
+  const lowConfidenceDetail = (kind: 'pose' | 'dynamic', score: number, min: number): string => {
+    const parts: string[] = [];
+    if (!handOk) parts.push(`hand ${obs.handScore === null ? '-' : fmt(obs.handScore)} < ${fmt(cfg.minHandScore)}`);
+    if (score < min) parts.push(`${kind} ${fmt(score)} < ${fmt(min)}`);
+    return parts.join(', ');
+  };
 
   // 후보가 사라지면 중복 방지 키를 풀어서 다음 등장 때 다시 로그가 남게 한다
   if (rawPose === null) s.ignoredStaticKey = null;
@@ -142,21 +160,21 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
   // 3 신뢰도 확인
   let staticCand: StaticPose | null = null;
   if (rawPose) {
-    if (!handOk || poseScore < cfg.minPoseScore) ignore(rawPose, 'low_confidence', { score: poseScore });
-    else staticCand = rawPose;
+    if (!handOk || poseScore < cfg.minPoseScore) {
+      ignore(rawPose, 'low_confidence', { score: poseScore, detail: lowConfidenceDetail('pose', poseScore, cfg.minPoseScore) });
+    } else staticCand = rawPose;
   }
   let dynCand: DynamicResult | null = null;
   if (obs.dynamic) {
-    if (!handOk || obs.dynamic.score < cfg.minDynamicScore) ignore(obs.dynamic.gesture, 'low_confidence', { score: obs.dynamic.score });
-    else dynCand = obs.dynamic;
+    const d = obs.dynamic;
+    if (!handOk || d.score < cfg.minDynamicScore) {
+      ignore(d.gesture, 'low_confidence', { score: d.score, detail: lowConfidenceDetail('dynamic', d.score, cfg.minDynamicScore) });
+    } else dynCand = d;
   }
 
-  // 7 쿨다운 (+ 4 같은 제스처면 연장)
+  // 7 쿨다운. 같은 제스처가 보여도 연장하지 않는다 (T-003: 손을 편 채 스와이프하면 open_palm 후보가
+  // 계속 잡혀 쿨다운이 끝나지 않았음). 재실행 방지는 release 규칙(아래)이 맡는다.
   if (s.phase === 'cooldown') {
-    const seenRaw: GestureId | null = obs.dynamic?.gesture ?? rawPose;
-    if (seenRaw && seenRaw === s.lastExecuted) {
-      s.cooldownUntil = Math.max(s.cooldownUntil, t + cfg.cooldownMs);
-    }
     if (t >= s.cooldownUntil) {
       s.phase = 'idle';
       s.candidate = null;

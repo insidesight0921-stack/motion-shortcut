@@ -39,7 +39,7 @@ pnpm dev
 ## 개발
 
 ```bash
-pnpm test        # 유닛 테스트 108개 (인식 로직·상태 머신·명령. 카메라 불필요)
+pnpm test        # 유닛 테스트 120개 (인식 로직·상태 머신·명령. 카메라 불필요)
 pnpm build       # 타입 검사 + 프로덕션 빌드
 pnpm typecheck
 ```

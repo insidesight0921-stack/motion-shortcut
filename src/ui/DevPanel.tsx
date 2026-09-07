@@ -8,7 +8,7 @@ const GROUPS: { title: string; keys: Key[] }[] = [
   { title: '신뢰도', keys: ['minHandScore', 'minPoseScore', 'minDynamicScore'] },
   { title: '손가락 판정', keys: ['fingerExtendRatio', 'fingerFoldRatio', 'thumbExtendMargin', 'poseSoftMargin'] },
   { title: '정적 유지', keys: ['palmHoldMs', 'fistHoldMs', 'holdGraceMs', 'holdMaxSpeed', 'motionWindowMs'] },
-  { title: '실행·쿨다운', keys: ['armDurationMs', 'cooldownMs'] },
+  { title: '실행·쿨다운', keys: ['armDurationMs', 'cooldownMs', 'ignoreLogThrottleMs'] },
   { title: '스와이프', keys: ['swipeWindowMs', 'swipeMinDurationMs', 'swipeMinDistance', 'swipeMaxYRatio', 'swipeMinStraightness', 'swipeMaxPointingFraction', 'trackingMaxGapMs'] },
   { title: '원', keys: ['circleWindowMs', 'circleMinAngleDeg', 'circleInProgressAngleDeg', 'circleMaxRadiusCv', 'circleMinRadius'] },
   { title: '버퍼', keys: ['trajectoryMs'] },
@@ -38,7 +38,9 @@ export function DevPanel() {
   };
 
   const fingers = hud.staticPose?.fingers;
+  const margins = hud.staticPose?.margins;
   const dyn = hud.dynamic;
+  const signed = (v: number) => (v >= 0 ? '+' : '') + v.toFixed(2);
 
   return (
     <>
@@ -72,6 +74,20 @@ export function DevPanel() {
                   ? `검 ${fingers.ratios.index.toFixed(2)} 중 ${fingers.ratios.middle.toFixed(2)} 약 ${fingers.ratios.ring.toFixed(2)} 새 ${fingers.ratios.pinky.toFixed(2)} 엄지 ${fingers.thumbMargin.toFixed(2)}`
                   : '-'}
               </dd>
+              <dt>펼침 마진</dt>
+              <dd className="mono">
+                {margins
+                  ? `검 ${signed(margins.extend.index)} 중 ${signed(margins.extend.middle)} 약 ${signed(margins.extend.ring)} 새 ${signed(margins.extend.pinky)} 엄지 ${signed(margins.extend.thumb)}`
+                  : '-'}
+              </dd>
+              <dt>접힘 마진</dt>
+              <dd className="mono">
+                {margins
+                  ? `검 ${signed(margins.fold.index)} 중 ${signed(margins.fold.middle)} 약 ${signed(margins.fold.ring)} 새 ${signed(margins.fold.pinky)}`
+                  : '-'}
+              </dd>
+              <dt>점수 기준</dt>
+              <dd>마진 0 → 0.5, 마진 ≥ {config.poseSoftMargin.toFixed(2)} → 1.0 (손가락 평균)</dd>
               <dt>속도</dt>
               <dd>{hud.motion.toFixed(2)} 손크기/초</dd>
               <dt>동적</dt>
