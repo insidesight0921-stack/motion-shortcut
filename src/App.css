@@ -313,3 +313,217 @@ button:disabled {
   margin: 0;
   font-variant-numeric: tabular-nums;
 }
+
+/* 요리 모드 */
+.cooking {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.recipe-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.recipe-title {
+  font-size: 16px;
+  margin: 0;
+}
+
+.recipe-progress {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.recipe-current {
+  margin-top: 8px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(79, 140, 255, 0.18), rgba(79, 140, 255, 0.04));
+  border: 1px solid rgba(79, 140, 255, 0.45);
+  animation: step-in 220ms ease-out;
+}
+
+@keyframes step-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.recipe-current-label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.recipe-current-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 4px 0 6px;
+}
+
+.recipe-current-detail {
+  margin: 0;
+  line-height: 1.5;
+}
+
+.recipe-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.recipe-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 6px;
+}
+
+.recipe-list li button {
+  width: 100%;
+  text-align: left;
+  font-size: 12px;
+  padding: 6px 8px;
+  color: var(--muted);
+}
+
+.recipe-list li.is-done button {
+  color: var(--text);
+  opacity: 0.7;
+}
+
+.recipe-list li.is-current button {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(79, 140, 255, 0.12);
+}
+
+/* YouTube */
+.yt-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: #000;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.yt-host,
+.yt-host > div,
+.yt-host iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.yt-placeholder {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+}
+
+.yt-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  font-size: 13px;
+}
+
+.yt-state {
+  color: var(--muted);
+  min-width: 70px;
+}
+
+.yt-state.is-on {
+  color: var(--ok);
+}
+
+.yt-input {
+  flex: 1;
+  min-width: 180px;
+  font: inherit;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+}
+
+.yt-error {
+  color: var(--danger);
+  width: 100%;
+  font-size: 12px;
+}
+
+/* 타이머 */
+.timer {
+  position: relative;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+}
+
+.timer-running {
+  border-color: var(--warn);
+}
+
+.timer-done {
+  border-color: var(--ok);
+  animation: timer-flash 700ms ease-in-out 3;
+}
+
+@keyframes timer-flash {
+  50% {
+    background: rgba(56, 193, 114, 0.25);
+  }
+}
+
+.timer-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  background: rgba(245, 166, 35, 0.18);
+  transition: width 200ms linear;
+}
+
+.timer-body {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 16px;
+}
+
+.timer-label {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.timer-time {
+  font-size: 30px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+}
+
+.timer-actions {
+  display: flex;
+  gap: 6px;
+}
