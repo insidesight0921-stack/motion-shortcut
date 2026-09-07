@@ -19,6 +19,11 @@ export interface GestureConfig {
   fingerFoldRatio: number;
   /** 엄지 펼침: dist(4,17) - dist(3,17) 이 이 값(손 크기 배수) 이상 */
   thumbExtendMargin: number;
+  /**
+   * 포즈 점수 완충 폭. 임계값 딱 걸치면 0.5점, 임계값에서 이 폭만큼 더 확실하면 1점.
+   * minPoseScore와 함께 "애매한 포즈"를 걸러내는 데 쓴다.
+   */
+  poseSoftMargin: number;
 
   /** 손바닥 펼침 유지 시간 */
   palmHoldMs: number;
@@ -61,6 +66,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
   fingerExtendRatio: 1.05,
   fingerFoldRatio: 0.95,
   thumbExtendMargin: 0.1,
+  poseSoftMargin: 0.15,
 
   palmHoldMs: 500,
   fistHoldMs: 2000,
@@ -89,6 +95,7 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   fingerExtendRatio: { min: 0.8, max: 1.5, step: 0.01, label: '손가락 펼침 비율' },
   fingerFoldRatio: { min: 0.5, max: 1.2, step: 0.01, label: '손가락 접힘 비율' },
   thumbExtendMargin: { min: 0, max: 0.5, step: 0.01, label: '엄지 펼침 마진' },
+  poseSoftMargin: { min: 0.02, max: 0.5, step: 0.01, label: '포즈 점수 완충 폭' },
   palmHoldMs: { min: 100, max: 2000, step: 50, label: '손바닥 유지(ms)' },
   fistHoldMs: { min: 500, max: 4000, step: 100, label: '주먹 유지(ms)' },
   holdGraceMs: { min: 0, max: 500, step: 10, label: '유지 유예(ms)' },
