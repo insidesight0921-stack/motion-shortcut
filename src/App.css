@@ -120,6 +120,7 @@ button:disabled {
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
   gap: 16px;
   padding: 16px;
+  align-items: start;
 }
 
 @media (max-width: 900px) {
@@ -526,4 +527,269 @@ button:disabled {
 .timer-actions {
   display: flex;
   gap: 6px;
+}
+
+/* 하단 패널 */
+.panel-bottom {
+  min-width: 0;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 12px;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+.mapping h3,
+.log h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+}
+
+.mapping-table,
+.log-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mapping-table th,
+.mapping-table td,
+.log-table th,
+.log-table td {
+  text-align: left;
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.mapping-table th,
+.log-table th {
+  color: var(--muted);
+  font-weight: 500;
+  font-size: 12px;
+}
+
+/* 로그 */
+.log-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.log-count {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.log-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.log-table-wrap {
+  max-height: 320px;
+  overflow: auto;
+  margin-top: 8px;
+}
+
+.log-empty {
+  color: var(--muted);
+  text-align: center;
+  padding: 20px !important;
+}
+
+.log-executed td:nth-child(4) {
+  color: var(--ok);
+}
+
+.log-noop td:nth-child(4) {
+  color: var(--warn);
+}
+
+.log-ignored td {
+  color: var(--muted);
+}
+
+/* 이펙트 */
+.fx-flash {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 0 4px var(--fx, var(--accent));
+  animation: fx-flash 700ms ease-out forwards;
+  z-index: 40;
+}
+
+.fx-toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--panel-2);
+  border: 1px solid var(--fx, var(--accent));
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
+  font-size: 15px;
+  animation: fx-toast 900ms ease-out forwards;
+  z-index: 41;
+  pointer-events: none;
+}
+
+.fx-ok {
+  --fx: var(--accent);
+}
+
+.fx-on {
+  --fx: var(--ok);
+}
+
+.fx-off {
+  --fx: var(--danger);
+}
+
+.fx-noop {
+  --fx: var(--warn);
+}
+
+.fx-gesture {
+  color: var(--muted);
+}
+
+.fx-command {
+  font-weight: 600;
+}
+
+@keyframes fx-flash {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes fx-toast {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-6px) scale(0.96);
+  }
+  12% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  80% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* 개발 패널 */
+.dev-toggle {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 50;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.dev-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: min(420px, 100vw);
+  overflow: auto;
+  background: var(--panel);
+  border-left: 1px solid var(--border);
+  padding: 14px 14px 64px;
+  z-index: 45;
+  font-size: 13px;
+}
+
+.dev-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.dev-head strong {
+  margin-right: auto;
+}
+
+.dev-scores {
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+
+.dev-scores dl {
+  margin: 6px 0 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+}
+
+.dev-scores dt {
+  color: var(--muted);
+}
+
+.dev-scores dd {
+  margin: 0;
+  word-break: break-all;
+}
+
+.dev-group h4 {
+  margin: 12px 0 6px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.dev-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 52px;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+}
+
+.dev-row.is-changed .dev-label {
+  color: var(--warn);
+}
+
+.dev-label {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dev-row input[type='range'] {
+  width: 100%;
+}
+
+.dev-value {
+  text-align: right;
+  font-size: 12px;
 }

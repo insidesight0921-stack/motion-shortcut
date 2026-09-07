@@ -26,6 +26,9 @@ interface GestureStoreState {
   enabled: boolean;
   hud: HudState;
   config: GestureConfig;
+  /** 마지막 실행 이펙트 (Effects 컴포넌트가 at 변화를 보고 표시) */
+  effect: EffectState | null;
+  muted: boolean;
 
   setVisionStatus: (status: VisionStatus, error: string | null) => void;
   setFrameStats: (fps: number, handDetected: boolean) => void;
@@ -34,6 +37,15 @@ interface GestureStoreState {
   setHud: (hud: HudState) => void;
   setConfig: (patch: Partial<GestureConfig>) => void;
   resetConfig: () => void;
+  setEffect: (effect: EffectState) => void;
+  setMuted: (muted: boolean) => void;
+}
+
+export interface EffectState {
+  gestureLabel: string;
+  label: string;
+  tone: 'ok' | 'on' | 'off' | 'noop';
+  at: number;
 }
 
 /**
@@ -49,6 +61,8 @@ export const useGestureStore = create<GestureStoreState>((set) => ({
   enabled: true,
   hud: INITIAL_HUD,
   config: DEFAULT_CONFIG,
+  effect: null,
+  muted: false,
 
   setVisionStatus: (visionStatus, visionError) => set({ visionStatus, visionError }),
   setFrameStats: (fps, handDetected) => set({ fps, handDetected }),
@@ -57,4 +71,6 @@ export const useGestureStore = create<GestureStoreState>((set) => ({
   setHud: (hud) => set({ hud }),
   setConfig: (patch) => set((s) => ({ config: { ...s.config, ...patch } })),
   resetConfig: () => set({ config: DEFAULT_CONFIG }),
+  setEffect: (effect) => set({ effect }),
+  setMuted: (muted) => set({ muted }),
 }));

@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useGestureStore } from '../store/gestureStore';
 import type { VisionSession } from '../vision/session';
 import { drawHand } from './drawLandmarks';
+import { unlockAudio } from './sound';
 
 interface Props {
   session: VisionSession;
@@ -58,6 +59,7 @@ export function CameraView({ session }: Props) {
   }, [session]);
 
   const start = () => {
+    unlockAudio(); // 사용자 클릭 시점에 오디오 컨텍스트를 깨운다
     const video = videoRef.current;
     if (video) session.start(video).catch(() => undefined);
   };
