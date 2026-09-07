@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { DEFAULT_CONFIG } from '../config';
 import { absRotationDeg, detectCircle, detectDynamic, detectSwipe, signedRotationDeg } from '../dynamic';
 import { LM, type HandFrame, type Point } from '../types';
-import { openHand, pointingHand, translateHand } from './fixtures';
+import { fistHand, openHand, pointingHand, translateHand } from './fixtures';
 
 const cfg = DEFAULT_CONFIG;
 const FPS_MS = 33;
@@ -164,9 +164,84 @@ describe('detectCircle', () => {
     expect(detectCircle(frames, lastT(frames), cfg)).toBeNull();
   });
 
-  it('원을 그린 뒤 검지 끝 궤적만 보므로 손 모양은 무관하다(펼친 손도 circle)', () => {
+  it('펼친 손(검지 펼침)으로 그린 원도 circle', () => {
     const frames = circular(1200, 0.75 * HAND, 1, openHand());
     expect(detectCircle(frames, lastT(frames), cfg)?.gesture).toBe('circle');
+  });
+
+  describe('검지 펼침 게이트 (T-007)', () => {
+    it('주먹을 쥔 채 손이 원을 그리면 circle이 아니다', () => {
+      const frames = circular(1200, 0.75 * HAND, 1, fistHand());
+      expect(detectCircle(frames, lastT(frames), cfg)).toBeNull();
+      expect(detectDynamic(frames, lastT(frames), cfg)).toBeNull();
+    });
+
+    it('게이트를 끄면(0) 주먹 원도 circle로 인정된다', () => {
+      const frames = circular(1200, 0.75 * HAND, 1, fistHand());
+      const off = { ...cfg, circleMinIndexExtendedFraction: 0 };
+      expect(detectCircle(frames, lastT(frames), off)?.gesture).toBe('circle');
+    });
+
+    it('창의 일부(25%)만 검지가 펼쳐졌으면 circle이 아니고, 85%면 circle이다', () => {
+      const n = Math.round(1200 / FPS_MS) + 1;
+      const make = (extendedFrom: number) =>
+        motionFrames(n, (i) => {
+          const a = (i / (n - 1)) * 2 * Math.PI;
+          return { dx: 0.75 * HAND * Math.cos(a), dy: 0.75 * HAND * Math.sin(a) };
+        }).map((f, i) => ({
+          ...f,
+          landmarks: translateHand(i >= extendedFrom ? pointingHand() : fistHand(), f.landmarks[0].x - 0.5, f.landmarks[0].y - 0.8),
+        }));
+      const quarter = make(Math.round(n * 0.75));
+      expect(detectCircle(quarter, lastT(quarter), cfg)).toBeNull();
+      const most = make(Math.round(n * 0.15));
+      const r = detectCircle(most, lastT(most), cfg);
+      expect(r?.gesture).toBe('circle');
+      expect(r!.detail.indexExtendedFraction).toBeGreaterThanOrEqual(0.8);
+    });
+  });
+
+  describe('가로/세로 비율 조건 (T-008)', () => {
+    /** 검지 끝이 가로 a, 세로 b 반지름인 타원을 도는 궤적 */
+    const ellipse = (a: number, b: number, durationMs = 1200) => {
+      const n = Math.round(durationMs / FPS_MS) + 1;
+      return motionFrames(
+        n,
+        (i) => {
+          const t = (i / (n - 1)) * 2 * Math.PI;
+          return { dx: a * Math.cos(t), dy: b * Math.sin(t) };
+        },
+        pointingHand(),
+      );
+    };
+
+    it('가로 3 : 세로 1 타원은 circle이 아니다 (반지름 변동 조건을 풀어도)', () => {
+      const frames = ellipse(1.5 * HAND, 0.5 * HAND);
+      expect(detectCircle(frames, lastT(frames), cfg)).toBeNull();
+      const looseCv = { ...cfg, circleMaxRadiusCv: 1 };
+      expect(detectCircle(frames, lastT(frames), looseCv)).toBeNull();
+      // 비율 조건만 끄면 통과 → 거부 원인이 비율 조건임을 확인
+      const noAspect = { ...looseCv, circleMinAspect: 0, circleMaxAspect: 100 };
+      expect(detectCircle(frames, lastT(frames), noAspect)?.gesture).toBe('circle');
+    });
+
+    it('세로로 긴 1 : 3 타원도 circle이 아니다', () => {
+      const frames = ellipse(0.5 * HAND, 1.5 * HAND);
+      expect(detectCircle(frames, lastT(frames), { ...cfg, circleMaxRadiusCv: 1 })).toBeNull();
+    });
+
+    it('정원은 circle이고 aspect가 1 근처다', () => {
+      const frames = ellipse(0.75 * HAND, 0.75 * HAND);
+      const r = detectCircle(frames, lastT(frames), cfg);
+      expect(r?.gesture).toBe('circle');
+      expect(r!.detail.aspect).toBeGreaterThan(0.9);
+      expect(r!.detail.aspect).toBeLessThan(1.1);
+    });
+
+    it('약간 눌린 타원(1.4:1)은 허용 범위 안이라 circle', () => {
+      const frames = ellipse(1.05 * HAND, 0.75 * HAND);
+      expect(detectCircle(frames, lastT(frames), cfg)?.gesture).toBe('circle');
+    });
   });
 });
 

@@ -1,6 +1,6 @@
 import type { GestureConfig } from './config';
 import { handScale, normalizeHand } from './normalize';
-import { isPointingPose } from './static';
+import { fingerStates, isPointingPose } from './static';
 import { LM, type DynamicResult, type HandFrame, type Point } from './types';
 
 /**
@@ -92,7 +92,19 @@ export interface CircleAnalysis {
   meanRadius: number;
   /** 반지름 변동계수 */
   radiusCv: number;
+  /** 궤적 x 범위 / y 범위. 정원은 1 근처, 납작한 고리는 크게 벗어난다 (T-008) */
+  aspect: number;
+  /** 창 안에서 검지가 펼침 상태인 프레임 비율 (T-007) */
+  indexExtendedFraction: number;
   frames: number;
+}
+
+/** 창 안에서 검지가 펼쳐진 프레임 비율 */
+export function indexExtendedFraction(win: HandFrame[], cfg: GestureConfig): number {
+  if (win.length === 0) return 0;
+  let n = 0;
+  for (const f of win) if (fingerStates(normalizeHand(f.landmarks).points, cfg).index) n++;
+  return n / win.length;
 }
 
 /** 원 판정에 쓰는 수치만 계산한다 (판정은 detectCircle). */
@@ -112,15 +124,39 @@ export function analyzeCircle(frames: HandFrame[], now: number, cfg: GestureConf
 
   const radii = pts.map((p) => Math.hypot(p.x - center.x, p.y - center.y) / scale);
   const meanRadius = radii.reduce((a, b) => a + b, 0) / radii.length;
-  if (meanRadius < 1e-6) return { totalAngleDeg: 0, meanRadius: 0, radiusCv: 0, frames: win.length };
+  const idxFrac = indexExtendedFraction(win, cfg);
+
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (const p of pts) {
+    if (p.x < minX) minX = p.x;
+    if (p.x > maxX) maxX = p.x;
+    if (p.y < minY) minY = p.y;
+    if (p.y > maxY) maxY = p.y;
+  }
+  const rangeY = maxY - minY;
+  const aspect = rangeY > 1e-9 ? (maxX - minX) / rangeY : Infinity;
+
+  if (meanRadius < 1e-6) {
+    return { totalAngleDeg: 0, meanRadius: 0, radiusCv: 0, aspect, indexExtendedFraction: idxFrac, frames: win.length };
+  }
   const variance = radii.reduce((a, r) => a + (r - meanRadius) ** 2, 0) / radii.length;
   const radiusCv = Math.sqrt(variance) / meanRadius;
-  return { totalAngleDeg: signedRotationDeg(pts, center), meanRadius, radiusCv, frames: win.length };
+  return { totalAngleDeg: signedRotationDeg(pts, center), meanRadius, radiusCv, aspect, indexExtendedFraction: idxFrac, frames: win.length };
+}
+
+/** 검지 펼침 게이트 (circleMinIndexExtendedFraction = 0 이면 항상 통과) */
+function indexGateOk(a: CircleAnalysis, cfg: GestureConfig): boolean {
+  return cfg.circleMinIndexExtendedFraction <= 0 || a.indexExtendedFraction >= cfg.circleMinIndexExtendedFraction;
 }
 
 /**
  * 원: 검지 끝(8) 궤적의 중심 기준 부호 있는 누적 회전각이 circleMinAngleDeg 이상이고,
- * 반지름이 충분히 크며(circleMinRadius), 반지름 변동이 작을 것(circleMaxRadiusCv).
+ * 반지름이 충분히 크며(circleMinRadius), 반지름 변동이 작고(circleMaxRadiusCv),
+ * 가로/세로 비율이 원에 가깝고(circleMinAspect~circleMaxAspect, T-008),
+ * 창 대부분에서 검지가 펼쳐져 있을 것(circleMinIndexExtendedFraction, T-007).
  */
 export function detectCircle(frames: HandFrame[], now: number, cfg: GestureConfig): DynamicResult | null {
   const a = analyzeCircle(frames, now, cfg);
@@ -129,6 +165,8 @@ export function detectCircle(frames: HandFrame[], now: number, cfg: GestureConfi
   if (angle < cfg.circleMinAngleDeg) return null;
   if (a.meanRadius < cfg.circleMinRadius) return null;
   if (a.radiusCv > cfg.circleMaxRadiusCv) return null;
+  if (a.aspect < cfg.circleMinAspect || a.aspect > cfg.circleMaxAspect) return null;
+  if (!indexGateOk(a, cfg)) return null;
 
   const angleQ = clamp01((angle - cfg.circleMinAngleDeg) / 60);
   const radiusQ = 1 - a.radiusCv / cfg.circleMaxRadiusCv;
@@ -140,6 +178,8 @@ export function detectCircle(frames: HandFrame[], now: number, cfg: GestureConfi
       totalAngleDeg: a.totalAngleDeg,
       meanRadius: a.meanRadius,
       radiusCv: a.radiusCv,
+      aspect: a.aspect,
+      indexExtendedFraction: a.indexExtendedFraction,
       direction: Math.sign(a.totalAngleDeg),
       frames: a.frames,
     },
@@ -215,12 +255,15 @@ export function detectDynamic(frames: HandFrame[], now: number, cfg: GestureConf
   const circle = detectCircle(frames, now, cfg);
   if (circle) return circle;
 
+  // 진행 중 판정에는 가로/세로 비율을 적용하지 않는다(반원은 본래 2:1). 검지 게이트는 적용해
+  // 주먹이 흔들리는 동안 스와이프까지 막히지 않게 한다.
   const a = analyzeCircle(frames, now, cfg);
   const circleInProgress =
     a !== null &&
     Math.abs(a.totalAngleDeg) >= cfg.circleInProgressAngleDeg &&
     a.meanRadius >= cfg.circleMinRadius &&
-    a.radiusCv <= cfg.circleMaxRadiusCv;
+    a.radiusCv <= cfg.circleMaxRadiusCv &&
+    indexGateOk(a, cfg);
   if (circleInProgress) return null;
 
   return detectSwipe(frames, now, cfg);

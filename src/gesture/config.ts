@@ -34,10 +34,15 @@ export interface GestureConfig {
   /** 유지 중 포즈가 잠깐 끊겨도 허용하는 시간 */
   holdGraceMs: number;
   /**
-   * 정적 포즈 유지 중 허용하는 손목 최대 속도 (손 크기/초).
+   * 손바닥 유지 중 허용하는 손목 최대 속도 (손 크기/초).
    * 이보다 빠르면 "지나가는 손"으로 보고 유지 시간을 누적하지 않는다 (손바닥 스와이프가 재생 토글로 잡히는 것 방지).
    */
-  holdMaxSpeed: number;
+  palmHoldMaxSpeed: number;
+  /**
+   * 주먹 유지 중 허용하는 손목 최대 속도 (손 크기/초). 주먹은 스와이프와 겹칠 일이 없고
+   * 2라운드 실기에서 "손이 움직임"으로 자주 끊겨 손바닥보다 넓게 둔다 (T-009).
+   */
+  fistHoldMaxSpeed: number;
   /** 속도 계산 창 */
   motionWindowMs: number;
 
@@ -77,6 +82,14 @@ export interface GestureConfig {
   circleMaxRadiusCv: number;
   /** 최소 평균 반지름 (손 크기 배수) */
   circleMinRadius: number;
+  /**
+   * 원 창 안에서 검지가 펼침 상태인 프레임 비율의 하한. 0이면 게이트 끔.
+   * 주먹 시도 직후 손이 흔들리며 원으로 잡히는 것을 막는다 (T-007).
+   */
+  circleMinIndexExtendedFraction: number;
+  /** 궤적 x 범위 / y 범위 의 하한·상한. 밀었다 되돌리는 납작한 고리를 거른다 (T-008) */
+  circleMinAspect: number;
+  circleMaxAspect: number;
 
   /** 궤적 버퍼 보관 시간 */
   trajectoryMs: number;
@@ -96,9 +109,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   poseSoftMargin: 0.08,
 
   palmHoldMs: 500,
-  fistHoldMs: 2000,
-  holdGraceMs: 150,
-  holdMaxSpeed: 1.5,
+  // 2라운드 실기에서 2000ms는 0/3 성공. 1200ms 아래로는 내리지 않는다: 주먹은 비활성 상태에서도 동작하는
+  // 잠금 해제 경로라, 조리 도구를 쥐는 자연스러운 주먹(대개 1초 미만)에 반응하면 안 된다 (T-009).
+  fistHoldMs: 1200,
+  holdGraceMs: 400,
+  palmHoldMaxSpeed: 1.5,
+  fistHoldMaxSpeed: 3.0,
   motionWindowMs: 150,
 
   armDurationMs: 200,
@@ -119,6 +135,9 @@ export const DEFAULT_CONFIG: GestureConfig = {
   circleInProgressAngleDeg: 150,
   circleMaxRadiusCv: 0.35,
   circleMinRadius: 0.5,
+  circleMinIndexExtendedFraction: 0.8,
+  circleMinAspect: 0.6,
+  circleMaxAspect: 1.6,
 
   trajectoryMs: 1500,
 };
@@ -135,7 +154,8 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   palmHoldMs: { min: 100, max: 2000, step: 50, label: '손바닥 유지(ms)' },
   fistHoldMs: { min: 500, max: 4000, step: 100, label: '주먹 유지(ms)' },
   holdGraceMs: { min: 0, max: 500, step: 10, label: '유지 유예(ms)' },
-  holdMaxSpeed: { min: 0.2, max: 10, step: 0.1, label: '유지 중 최대 속도(손 크기/초)' },
+  palmHoldMaxSpeed: { min: 0.2, max: 10, step: 0.1, label: '손바닥 유지 중 최대 속도(손 크기/초)' },
+  fistHoldMaxSpeed: { min: 0.2, max: 10, step: 0.1, label: '주먹 유지 중 최대 속도(손 크기/초)' },
   motionWindowMs: { min: 50, max: 500, step: 10, label: '속도 계산 창(ms)' },
   armDurationMs: { min: 0, max: 1000, step: 50, label: '실행 예정 표시(ms)' },
   cooldownMs: { min: 0, max: 5000, step: 100, label: '쿨다운(ms)' },
@@ -152,5 +172,8 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   circleInProgressAngleDeg: { min: 60, max: 360, step: 10, label: '원 진행 중 판정각(도)' },
   circleMaxRadiusCv: { min: 0.05, max: 1, step: 0.05, label: '원 반지름 변동 상한' },
   circleMinRadius: { min: 0.1, max: 2, step: 0.05, label: '원 최소 반지름(손 크기)' },
+  circleMinIndexExtendedFraction: { min: 0, max: 1, step: 0.05, label: '원: 검지 펼침 최소 비율(0=끔)' },
+  circleMinAspect: { min: 0.1, max: 1, step: 0.05, label: '원: 가로/세로 비율 하한' },
+  circleMaxAspect: { min: 1, max: 5, step: 0.1, label: '원: 가로/세로 비율 상한' },
   trajectoryMs: { min: 500, max: 3000, step: 100, label: '궤적 보관(ms)' },
 };

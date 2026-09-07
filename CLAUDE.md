@@ -57,7 +57,7 @@ docs/
 
 - 브라우저 안의 기능만 제어. OS·다른 탭 제어 없음.
 - 한 손 제스처만. 기본 동작 5개만 하드코딩.
-- 실행 전 확인 단계 없음. 대신 활성화 on/off: 주먹 2초 + 화면 버튼 + `Ctrl+Shift+M`(macOS도 Cmd가 아닌 Ctrl).
+- 실행 전 확인 단계 없음. 대신 활성화 on/off: 주먹 유지(`fistHoldMs`, 현재 1.2초. 잠금 해제 경로라 1.2초 아래로 내리지 않음, T-009) + 화면 버튼 + `Ctrl+Shift+M`(macOS도 Cmd가 아닌 Ctrl).
 - 조리 영상은 YouTube IFrame Player API.
 
 ## 브랜치 규칙

@@ -60,29 +60,48 @@ describe('정적 포즈 유지', () => {
     expect(exec.t).toBeGreaterThanOrEqual(cfg.palmHoldMs + cfg.armDurationMs);
   });
 
-  it('주먹은 2초를 채워야 실행된다', () => {
-    const short = run(createInitialState(), 0, 1500, { pose: 'fist' });
+  it('주먹은 fistHoldMs(1.2초)를 채워야 실행된다', () => {
+    expect(cfg.fistHoldMs).toBe(1200);
+    const short = run(createInitialState(), 0, 1000, { pose: 'fist' });
     expect(short.executed).toEqual([]);
-    const long = run(createInitialState(), 0, 2500, { pose: 'fist' });
+    const long = run(createInitialState(), 0, 1600, { pose: 'fist' });
     expect(long.executed).toEqual(['fist']);
+  });
+
+  it('주먹 유지 중 300ms 끊김이 반복돼도 유예(400ms) 안이라 실행된다 (T-009)', () => {
+    // 200ms 관측 → 300ms 소실 → 반복. 실기에서 주먹은 랜드마크가 자주 튄다.
+    let s = createInitialState();
+    let t = 0;
+    const executed: string[] = [];
+    for (let cycle = 0; cycle < 6; cycle++) {
+      const seen = run(s, t, 200, { pose: 'fist' });
+      s = seen.state;
+      executed.push(...seen.executed);
+      t = seen.tEnd + FPS_MS;
+      const lost = run(s, t, 300 - FPS_MS, { handScore: null });
+      s = lost.state;
+      executed.push(...lost.executed);
+      t = lost.tEnd + FPS_MS;
+    }
+    expect(executed).toEqual(['fist']);
   });
 
   it('유지 시간 부족으로 포즈가 사라지면 ignored:hold_too_short, 실행 없음', () => {
     const a = run(createInitialState(), 0, 300, { pose: 'open_palm' });
-    const b = run(a.state, a.tEnd + FPS_MS, 500, { pose: null });
+    const b = run(a.state, a.tEnd + FPS_MS, cfg.holdGraceMs + 200, { pose: null });
     expect([...a.executed, ...b.executed]).toEqual([]);
     expect(ignoredReasons(b.events)).toContain('hold_too_short');
   });
 
   it('손 자체가 사라지면 ignored:hand_lost', () => {
     const a = run(createInitialState(), 0, 300, { pose: 'open_palm' });
-    const b = run(a.state, a.tEnd + FPS_MS, 500, { handScore: null });
+    const b = run(a.state, a.tEnd + FPS_MS, cfg.holdGraceMs + 200, { handScore: null });
     expect(ignoredReasons(b.events)).toContain('hand_lost');
   });
 
-  it('유예 시간(150ms) 안의 끊김은 유지를 리셋하지 않는다', () => {
+  it('유예 시간(holdGraceMs) 안의 끊김은 유지를 리셋하지 않는다', () => {
     const a = run(createInitialState(), 0, 300, { pose: 'open_palm' });
-    const gap = run(a.state, a.tEnd + FPS_MS, 100, { pose: null }); // 약 100ms 끊김
+    const gap = run(a.state, a.tEnd + FPS_MS, cfg.holdGraceMs - 100, { pose: null });
     expect(ignoredReasons(gap.events)).toEqual([]);
     const c = run(gap.state, gap.tEnd + FPS_MS, 300, { pose: 'open_palm' });
     expect(c.executed).toEqual(['open_palm']);
@@ -90,16 +109,28 @@ describe('정적 포즈 유지', () => {
 
   it('유예 시간을 넘는 끊김은 유지를 리셋한다', () => {
     const a = run(createInitialState(), 0, 300, { pose: 'open_palm' });
-    const gap = run(a.state, a.tEnd + FPS_MS, 300, { pose: null });
+    const gap = run(a.state, a.tEnd + FPS_MS, cfg.holdGraceMs + 200, { pose: null });
     expect(ignoredReasons(gap.events)).toContain('hold_too_short');
     const c = run(gap.state, gap.tEnd + FPS_MS, 300, { pose: 'open_palm' });
     expect(c.executed).toEqual([]); // 300ms로는 부족 → 처음부터 다시 센 것
   });
 
   it('손이 빠르게 움직이는 동안은 유지 시간이 쌓이지 않는다 (ignored:moving)', () => {
-    const r = run(createInitialState(), 0, 1000, { pose: 'open_palm', motion: cfg.holdMaxSpeed * 2 });
+    const r = run(createInitialState(), 0, 1000, { pose: 'open_palm', motion: cfg.palmHoldMaxSpeed * 2 });
     expect(r.executed).toEqual([]);
     expect(ignoredReasons(r.events)).toContain('moving');
+  });
+
+  it('유지 중 허용 속도는 포즈별: 손바닥에는 과한 속도가 주먹에는 허용된다 (T-009)', () => {
+    expect(cfg.fistHoldMaxSpeed).toBeGreaterThan(cfg.palmHoldMaxSpeed);
+    const between = (cfg.palmHoldMaxSpeed + cfg.fistHoldMaxSpeed) / 2;
+    const palm = run(createInitialState(), 0, 1000, { pose: 'open_palm', motion: between });
+    expect(palm.executed).toEqual([]);
+    expect(ignoredReasons(palm.events)).toContain('moving');
+    const fist = run(createInitialState(), 0, 1600, { pose: 'fist', motion: between });
+    expect(fist.executed).toEqual(['fist']);
+    const tooFast = run(createInitialState(), 0, 1600, { pose: 'fist', motion: cfg.fistHoldMaxSpeed * 2 });
+    expect(tooFast.executed).toEqual([]);
   });
 });
 
@@ -276,11 +307,15 @@ describe('쿨다운과 재실행 방지', () => {
     expect(again.executed).toEqual(['fist']);
   });
 
-  it('다른 포즈로 바뀌면 release되어 정상 재무장된다', () => {
-    const a = run(createInitialState(), 0, 2500, { pose: 'fist' });
-    const during = run(a.state, a.tEnd + FPS_MS, cfg.cooldownMs + 100, { pose: 'open_palm' });
-    const again = run(during.state, during.tEnd + FPS_MS, 2500, { pose: 'fist' });
+  it('다른 포즈가 관측되면 release되어 정상 재무장된다', () => {
+    const a = run(createInitialState(), 0, 1600, { pose: 'fist' });
+    expect(a.executed).toEqual(['fist']);
+    // 쿨다운 동안 다른 포즈(점수가 낮아 후보는 아니지만 관측은 됨)가 보이면 release
+    const during = run(a.state, a.tEnd + FPS_MS, cfg.cooldownMs + 100, { pose: 'open_palm', score: 0.3 });
+    expect(during.executed).toEqual([]);
+    const again = run(during.state, during.tEnd + FPS_MS, 1600, { pose: 'fist' });
     expect(again.executed).toEqual(['fist']);
+    expect(ignoredReasons(again.events)).not.toContain('needs_release');
   });
 });
 

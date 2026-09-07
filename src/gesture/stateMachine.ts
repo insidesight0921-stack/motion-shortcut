@@ -112,6 +112,11 @@ export function holdMsFor(pose: StaticPose, cfg: GestureConfig): number {
   return pose === 'fist' ? cfg.fistHoldMs : cfg.palmHoldMs;
 }
 
+/** 유지 중 허용 속도는 포즈별로 다르다. 주먹은 스와이프와 겹치지 않아 더 관대하다 (T-009) */
+export function holdMaxSpeedFor(pose: StaticPose, cfg: GestureConfig): number {
+  return pose === 'fist' ? cfg.fistHoldMaxSpeed : cfg.palmHoldMaxSpeed;
+}
+
 export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): StepResult {
   const s: MachineState = { ...prev };
   const events: GestureEvent[] = [];
@@ -225,7 +230,7 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
     const pose = s.candidate as StaticPose;
     const holdMs = holdMsFor(pose, cfg);
     const stillHere = staticCand === pose;
-    const moving = obs.motion > cfg.holdMaxSpeed;
+    const moving = obs.motion > holdMaxSpeedFor(pose, cfg);
     if (stillHere && !moving) {
       s.lastSeen = t;
       s.progress = Math.min(1, (t - s.holdStart) / holdMs);

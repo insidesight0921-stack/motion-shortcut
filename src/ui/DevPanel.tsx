@@ -7,10 +7,22 @@ type Key = keyof GestureConfig;
 const GROUPS: { title: string; keys: Key[] }[] = [
   { title: '신뢰도', keys: ['minHandScore', 'minPoseScore', 'minDynamicScore'] },
   { title: '손가락 판정', keys: ['fingerExtendRatio', 'fingerFoldRatio', 'thumbExtendMargin', 'poseSoftMargin'] },
-  { title: '정적 유지', keys: ['palmHoldMs', 'fistHoldMs', 'holdGraceMs', 'holdMaxSpeed', 'motionWindowMs'] },
+  { title: '정적 유지', keys: ['palmHoldMs', 'fistHoldMs', 'holdGraceMs', 'palmHoldMaxSpeed', 'fistHoldMaxSpeed', 'motionWindowMs'] },
   { title: '실행·쿨다운', keys: ['armDurationMs', 'cooldownMs', 'ignoreLogThrottleMs'] },
   { title: '스와이프', keys: ['swipeWindowMs', 'swipeMinDurationMs', 'swipeMinDistance', 'swipeMaxYRatio', 'swipeMinStraightness', 'swipeMaxPointingFraction', 'trackingMaxGapMs'] },
-  { title: '원', keys: ['circleWindowMs', 'circleMinAngleDeg', 'circleInProgressAngleDeg', 'circleMaxRadiusCv', 'circleMinRadius'] },
+  {
+    title: '원',
+    keys: [
+      'circleWindowMs',
+      'circleMinAngleDeg',
+      'circleInProgressAngleDeg',
+      'circleMaxRadiusCv',
+      'circleMinRadius',
+      'circleMinIndexExtendedFraction',
+      'circleMinAspect',
+      'circleMaxAspect',
+    ],
+  },
   { title: '버퍼', keys: ['trajectoryMs'] },
 ];
 
