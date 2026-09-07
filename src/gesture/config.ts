@@ -1,0 +1,106 @@
+/**
+ * 모든 인식 임계값을 한 곳에 모은다.
+ * 값은 전부 튜닝 대상 초기값이다. 개발 패널에서 실시간으로 바뀌므로
+ * 판정 함수는 이 객체를 매 틱 인자로 받아야 한다(모듈 상수로 캡처하지 말 것).
+ *
+ * 거리 단위 표기:
+ *  - "손 크기 배수": 손목(0)–중지 MCP(9) 거리를 1로 본 단위
+ *  - ms: 밀리초
+ */
+export interface GestureConfig {
+  /** HandLandmarker가 준 손 신뢰도(handedness score)의 하한 */
+  minHandScore: number;
+  /** 자체 정적 포즈 판정 점수의 하한 */
+  minPoseScore: number;
+
+  /** 손가락 펼침: dist(tip, wrist) / dist(pip, wrist) 가 이 값 이상 */
+  fingerExtendRatio: number;
+  /** 손가락 접힘: 위 비율이 이 값 이하 (사이 구간은 "애매"로 취급) */
+  fingerFoldRatio: number;
+  /** 엄지 펼침: dist(4,17) - dist(3,17) 이 이 값(손 크기 배수) 이상 */
+  thumbExtendMargin: number;
+
+  /** 손바닥 펼침 유지 시간 */
+  palmHoldMs: number;
+  /** 주먹 유지 시간 (활성화 토글) */
+  fistHoldMs: number;
+  /** 유지 중 포즈가 잠깐 끊겨도 허용하는 시간 */
+  holdGraceMs: number;
+
+  /** "실행 예정" 표시 시간 */
+  armDurationMs: number;
+  /** 실행 후 쿨다운 */
+  cooldownMs: number;
+
+  /** 스와이프 판정 창 */
+  swipeWindowMs: number;
+  /** 스와이프 최소 x 이동량 (손 크기 배수) */
+  swipeMinDistance: number;
+  /** |dy| / |dx| 상한 (수평성) */
+  swipeMaxYRatio: number;
+  /** 창 안에서 프레임 간 간격이 이 값을 넘으면 추적 끊김으로 보고 무효 */
+  swipeMaxGapMs: number;
+
+  /** 원 판정 창 */
+  circleWindowMs: number;
+  /** 원 최소 누적 회전각(부호 있는 합의 절댓값), 도 */
+  circleMinAngleDeg: number;
+  /** 반지름 변동계수(표준편차/평균) 상한 */
+  circleMaxRadiusCv: number;
+  /** 최소 평균 반지름 (손 크기 배수) */
+  circleMinRadius: number;
+
+  /** 궤적 버퍼 보관 시간 */
+  trajectoryMs: number;
+}
+
+export const DEFAULT_CONFIG: GestureConfig = {
+  minHandScore: 0.6,
+  minPoseScore: 0.6,
+
+  fingerExtendRatio: 1.05,
+  fingerFoldRatio: 0.95,
+  thumbExtendMargin: 0.1,
+
+  palmHoldMs: 500,
+  fistHoldMs: 2000,
+  holdGraceMs: 150,
+
+  armDurationMs: 200,
+  cooldownMs: 1500,
+
+  swipeWindowMs: 500,
+  swipeMinDistance: 2.0,
+  swipeMaxYRatio: 0.5,
+  swipeMaxGapMs: 150,
+
+  circleWindowMs: 1500,
+  circleMinAngleDeg: 300,
+  circleMaxRadiusCv: 0.35,
+  circleMinRadius: 0.5,
+
+  trajectoryMs: 1500,
+};
+
+/** 개발 패널 슬라이더 범위. key는 GestureConfig의 키. */
+export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: number; step: number; label: string }> = {
+  minHandScore: { min: 0, max: 1, step: 0.05, label: '손 신뢰도 하한' },
+  minPoseScore: { min: 0, max: 1, step: 0.05, label: '포즈 점수 하한' },
+  fingerExtendRatio: { min: 0.8, max: 1.5, step: 0.01, label: '손가락 펼침 비율' },
+  fingerFoldRatio: { min: 0.5, max: 1.2, step: 0.01, label: '손가락 접힘 비율' },
+  thumbExtendMargin: { min: 0, max: 0.5, step: 0.01, label: '엄지 펼침 마진' },
+  palmHoldMs: { min: 100, max: 2000, step: 50, label: '손바닥 유지(ms)' },
+  fistHoldMs: { min: 500, max: 4000, step: 100, label: '주먹 유지(ms)' },
+  holdGraceMs: { min: 0, max: 500, step: 10, label: '유지 유예(ms)' },
+  armDurationMs: { min: 0, max: 1000, step: 50, label: '실행 예정 표시(ms)' },
+  cooldownMs: { min: 0, max: 5000, step: 100, label: '쿨다운(ms)' },
+  swipeWindowMs: { min: 200, max: 1500, step: 50, label: '스와이프 창(ms)' },
+  swipeMinDistance: { min: 0.5, max: 5, step: 0.1, label: '스와이프 최소 이동(손 크기)' },
+  swipeMaxYRatio: { min: 0.1, max: 2, step: 0.05, label: '스와이프 |dy|/|dx| 상한' },
+  swipeMaxGapMs: { min: 50, max: 500, step: 10, label: '스와이프 추적 끊김(ms)' },
+  circleWindowMs: { min: 500, max: 3000, step: 100, label: '원 판정 창(ms)' },
+  circleMinAngleDeg: { min: 180, max: 720, step: 10, label: '원 최소 회전각(도)' },
+  circleMaxRadiusCv: { min: 0.05, max: 1, step: 0.05, label: '원 반지름 변동 상한' },
+  circleMinRadius: { min: 0.1, max: 2, step: 0.05, label: '원 최소 반지름(손 크기)' },
+  trajectoryMs: { min: 500, max: 3000, step: 100, label: '궤적 보관(ms)' },
+};

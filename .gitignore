@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+
+# build
+dist/
+*.tsbuildinfo
+
+# logs
+*.log
+pnpm-debug.log*
+
+# editor / OS
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
+.idea/
+
+# local-only Claude Code settings (shared settings would live in .claude/settings.json)
+.claude/settings.local.json
+
+# env
+.env
+.env.*
+!.env.example

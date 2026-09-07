@@ -1,0 +1,5 @@
+# pnpm 11은 프로젝트 설정을 package.json의 "pnpm" 필드가 아니라 이 파일에서 읽는다.
+# esbuild(vite 의존)의 postinstall 스크립트 실행을 허용한다. 허용하지 않으면
+# pnpm이 "Ignored build scripts" 오류로 모든 스크립트 실행을 막는다.
+allowBuilds:
+  esbuild: true
