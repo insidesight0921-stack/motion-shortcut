@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import { detectDynamic } from '../gesture/dynamic';
 import { GesturePipeline, type PipelineOutput } from '../gesture/pipeline';
 import type { GestureEvent } from '../gesture/stateMachine';
 import type { DynamicDetector } from '../gesture/pipeline';
@@ -27,7 +28,8 @@ export function useGestureEngine(session: VisionSession, handlers: EngineHandler
     const pipeline = new GesturePipeline({
       getConfig: () => useGestureStore.getState().config,
       getEnabled: () => useGestureStore.getState().enabled,
-      detectDynamic: (frames, now, cfg) => handlersRef.current.detectDynamic?.(frames, now, cfg) ?? null,
+      // 핸들러가 검출기를 주면 그것을, 아니면 기본 detectDynamic을 쓴다
+      detectDynamic: (frames, now, cfg) => (handlersRef.current.detectDynamic ?? detectDynamic)(frames, now, cfg),
     });
 
     let lastHudAt = 0;

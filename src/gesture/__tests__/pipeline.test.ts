@@ -87,6 +87,27 @@ describe('GesturePipeline', () => {
     expect(later.hud.staticPose?.pose).toBe('open_palm');
   });
 
+  it('오른쪽 스와이프 프레임을 넣으면 swipe_right가 정확히 한 번 실행되고 궤적이 비워진다', () => {
+    const { pipeline } = makePipeline();
+    const HAND = 0.2;
+    const n = 13; // 약 400ms
+    const executed: string[] = [];
+    let clearedAt = -1;
+    let t = 0;
+    for (let i = 0; i < n + 20; i++, t += FPS_MS) {
+      // 13프레임 동안 2.5 손크기 이동 후 정지
+      const k = Math.min(i, n - 1);
+      const lm = translateHand(openHand(), (k / (n - 1)) * 2.5 * HAND, 0);
+      const out = pipeline.process({ t, landmarks: lm, score: 0.95 }, t);
+      if (out.executed) {
+        executed.push(out.executed);
+        if (pipeline.trajectory.length === 0) clearedAt = t;
+      }
+    }
+    expect(executed).toEqual(['swipe_right']);
+    expect(clearedAt).toBeGreaterThan(0);
+  });
+
   it('손이 없는 프레임(null)도 시간이 흘러 쿨다운이 끝난다', () => {
     const { pipeline } = makePipeline();
     const a = feed(pipeline, openHand(), 0, 800);

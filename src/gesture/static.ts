@@ -72,6 +72,20 @@ export function fingerStates(norm: Point[], cfg: GestureConfig): FingerStates {
 }
 
 /**
+ * 포인팅(검지만 펼침, 중지·약지·새끼 접힘). 명령에 매핑된 포즈는 아니고,
+ * "원 그리는 손"과 "스와이프하는 손"을 구분하는 데 쓴다. 엄지는 무관.
+ */
+export function isPointingPose(norm: Point[], cfg: GestureConfig): boolean {
+  const f = fingerStates(norm, cfg);
+  return (
+    f.index &&
+    f.ratios.middle <= cfg.fingerFoldRatio &&
+    f.ratios.ring <= cfg.fingerFoldRatio &&
+    f.ratios.pinky <= cfg.fingerFoldRatio
+  );
+}
+
+/**
  * 정적 포즈 판정.
  *  - open_palm: 엄지 포함 5개 모두 펼침
  *  - fist: 엄지 제외 4개 모두 접힘 (ratio <= fingerFoldRatio). 엄지는 어디 있든 무관

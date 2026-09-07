@@ -12,6 +12,8 @@ export interface GestureConfig {
   minHandScore: number;
   /** 자체 정적 포즈 판정 점수의 하한 */
   minPoseScore: number;
+  /** 동적 제스처 자체 점수의 하한. 동적 점수는 조건을 통과하면 0.5, 여유가 있을수록 1에 가깝다 */
+  minDynamicScore: number;
 
   /** 손가락 펼침: dist(tip, wrist) / dist(pip, wrist) 가 이 값 이상 */
   fingerExtendRatio: number;
@@ -44,19 +46,31 @@ export interface GestureConfig {
   /** 실행 후 쿨다운 */
   cooldownMs: number;
 
+  /** 동적 제스처 창 안에서 프레임 간 간격이 이 값을 넘으면 추적 끊김으로 보고 무효 */
+  trackingMaxGapMs: number;
+
   /** 스와이프 판정 창 */
   swipeWindowMs: number;
+  /** 스와이프로 인정하는 최소 지속 시간 (한두 프레임 튐 방지) */
+  swipeMinDurationMs: number;
   /** 스와이프 최소 x 이동량 (손 크기 배수) */
   swipeMinDistance: number;
-  /** |dy| / |dx| 상한 (수평성) */
+  /** 수평성: max(|net dy|, 직선에서 벗어난 최대 수직 편차) / |dx| 상한 */
   swipeMaxYRatio: number;
-  /** 창 안에서 프레임 간 간격이 이 값을 넘으면 추적 끊김으로 보고 무효 */
-  swipeMaxGapMs: number;
+  /** 직진성: |net dx| / Σ|Δx| 하한 (왕복하면 낮아짐) */
+  swipeMinStraightness: number;
+  /**
+   * 창 안에서 "검지만 편 손(포인팅)" 프레임 비율이 이 값을 넘으면 스와이프로 보지 않는다.
+   * 원은 검지로 그리므로, 큰 원의 첫 호(弧)가 스와이프로 잡히는 것을 손 모양으로 구분한다.
+   */
+  swipeMaxPointingFraction: number;
 
   /** 원 판정 창 */
   circleWindowMs: number;
   /** 원 최소 누적 회전각(부호 있는 합의 절댓값), 도 */
   circleMinAngleDeg: number;
+  /** 이 각도 이상 회전이 진행 중이면 "원 그리는 중"으로 보고 스와이프 판정을 보류 */
+  circleInProgressAngleDeg: number;
   /** 반지름 변동계수(표준편차/평균) 상한 */
   circleMaxRadiusCv: number;
   /** 최소 평균 반지름 (손 크기 배수) */
@@ -69,6 +83,7 @@ export interface GestureConfig {
 export const DEFAULT_CONFIG: GestureConfig = {
   minHandScore: 0.6,
   minPoseScore: 0.6,
+  minDynamicScore: 0.5,
 
   fingerExtendRatio: 1.05,
   fingerFoldRatio: 0.95,
@@ -84,13 +99,18 @@ export const DEFAULT_CONFIG: GestureConfig = {
   armDurationMs: 200,
   cooldownMs: 1500,
 
+  trackingMaxGapMs: 150,
+
   swipeWindowMs: 500,
+  swipeMinDurationMs: 120,
   swipeMinDistance: 2.0,
-  swipeMaxYRatio: 0.5,
-  swipeMaxGapMs: 150,
+  swipeMaxYRatio: 0.35,
+  swipeMinStraightness: 0.75,
+  swipeMaxPointingFraction: 0.5,
 
   circleWindowMs: 1500,
   circleMinAngleDeg: 300,
+  circleInProgressAngleDeg: 150,
   circleMaxRadiusCv: 0.35,
   circleMinRadius: 0.5,
 
@@ -101,6 +121,7 @@ export const DEFAULT_CONFIG: GestureConfig = {
 export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: number; step: number; label: string }> = {
   minHandScore: { min: 0, max: 1, step: 0.05, label: '손 신뢰도 하한' },
   minPoseScore: { min: 0, max: 1, step: 0.05, label: '포즈 점수 하한' },
+  minDynamicScore: { min: 0, max: 1, step: 0.05, label: '동적 점수 하한' },
   fingerExtendRatio: { min: 0.8, max: 1.5, step: 0.01, label: '손가락 펼침 비율' },
   fingerFoldRatio: { min: 0.5, max: 1.2, step: 0.01, label: '손가락 접힘 비율' },
   thumbExtendMargin: { min: 0, max: 0.5, step: 0.01, label: '엄지 펼침 마진' },
@@ -112,12 +133,16 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   motionWindowMs: { min: 50, max: 500, step: 10, label: '속도 계산 창(ms)' },
   armDurationMs: { min: 0, max: 1000, step: 50, label: '실행 예정 표시(ms)' },
   cooldownMs: { min: 0, max: 5000, step: 100, label: '쿨다운(ms)' },
+  trackingMaxGapMs: { min: 50, max: 500, step: 10, label: '추적 끊김 허용(ms)' },
   swipeWindowMs: { min: 200, max: 1500, step: 50, label: '스와이프 창(ms)' },
+  swipeMinDurationMs: { min: 0, max: 500, step: 10, label: '스와이프 최소 지속(ms)' },
   swipeMinDistance: { min: 0.5, max: 5, step: 0.1, label: '스와이프 최소 이동(손 크기)' },
-  swipeMaxYRatio: { min: 0.1, max: 2, step: 0.05, label: '스와이프 |dy|/|dx| 상한' },
-  swipeMaxGapMs: { min: 50, max: 500, step: 10, label: '스와이프 추적 끊김(ms)' },
+  swipeMaxYRatio: { min: 0.1, max: 2, step: 0.05, label: '스와이프 수직 편차 상한' },
+  swipeMinStraightness: { min: 0.3, max: 1, step: 0.05, label: '스와이프 직진성 하한' },
+  swipeMaxPointingFraction: { min: 0, max: 1, step: 0.05, label: '스와이프 중 포인팅 허용 비율' },
   circleWindowMs: { min: 500, max: 3000, step: 100, label: '원 판정 창(ms)' },
   circleMinAngleDeg: { min: 180, max: 720, step: 10, label: '원 최소 회전각(도)' },
+  circleInProgressAngleDeg: { min: 60, max: 360, step: 10, label: '원 진행 중 판정각(도)' },
   circleMaxRadiusCv: { min: 0.05, max: 1, step: 0.05, label: '원 반지름 변동 상한' },
   circleMinRadius: { min: 0.1, max: 2, step: 0.05, label: '원 최소 반지름(손 크기)' },
   trajectoryMs: { min: 500, max: 3000, step: 100, label: '궤적 보관(ms)' },

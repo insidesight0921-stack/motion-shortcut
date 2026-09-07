@@ -147,7 +147,7 @@ export function step(prev: MachineState, obs: Observation, cfg: GestureConfig): 
   }
   let dynCand: DynamicResult | null = null;
   if (obs.dynamic) {
-    if (!handOk || obs.dynamic.score < cfg.minPoseScore) ignore(obs.dynamic.gesture, 'low_confidence', { score: obs.dynamic.score });
+    if (!handOk || obs.dynamic.score < cfg.minDynamicScore) ignore(obs.dynamic.gesture, 'low_confidence', { score: obs.dynamic.score });
     else dynCand = obs.dynamic;
   }
 

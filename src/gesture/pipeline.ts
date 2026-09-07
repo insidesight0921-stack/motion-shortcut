@@ -1,4 +1,5 @@
 import type { GestureConfig } from './config';
+import { detectDynamic as defaultDetectDynamic } from './dynamic';
 import { dist, handScale, normalizeHand } from './normalize';
 import { classifyStaticPose, type StaticPoseResult } from './static';
 import { createInitialState, step, type GestureEvent, type MachineState, type Observation, type Phase } from './stateMachine';
@@ -27,12 +28,13 @@ export interface PipelineOutput {
   executed: GestureId | null;
 }
 
-/** 동적 제스처 검출기 시그니처. 6단계에서 dynamic.ts가 구현한다. */
+/** 동적 제스처 검출기 시그니처. 기본 구현은 dynamic.ts의 detectDynamic. */
 export type DynamicDetector = (frames: HandFrame[], now: number, cfg: GestureConfig) => DynamicResult | null;
 
 export interface PipelineDeps {
   getConfig: () => GestureConfig;
   getEnabled: () => boolean;
+  /** 생략하면 dynamic.ts의 detectDynamic. 테스트에서 null 검출기로 끌 수 있다. */
   detectDynamic?: DynamicDetector;
 }
 
@@ -69,9 +71,8 @@ export class GesturePipeline {
       this.trajectory.push(frame);
       staticPose = classifyStaticPose(normalizeHand(frame.landmarks).points, cfg);
       motion = this.wristSpeed(cfg, t);
-      if (this.deps.detectDynamic) {
-        dynamic = this.deps.detectDynamic(this.trajectory.window(cfg.trajectoryMs, t), t, cfg);
-      }
+      const detect = this.deps.detectDynamic ?? defaultDetectDynamic;
+      dynamic = detect(this.trajectory.window(cfg.trajectoryMs, t), t, cfg);
     }
 
     const obs: Observation = {
