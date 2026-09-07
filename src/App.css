@@ -66,6 +66,55 @@ button:disabled {
   font-size: 13px;
 }
 
+.app-header-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* 활성화 토글 */
+.activation-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.activation-toggle kbd {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--muted);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.activation-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.activation-toggle.is-on {
+  border-color: rgba(56, 193, 114, 0.6);
+}
+
+.activation-toggle.is-on .activation-dot {
+  background: var(--ok);
+  box-shadow: 0 0 8px rgba(56, 193, 114, 0.7);
+}
+
+.activation-toggle.is-off {
+  border-color: rgba(239, 83, 80, 0.6);
+}
+
+.activation-toggle.is-off .activation-dot {
+  background: var(--danger);
+}
+
 .layout {
   display: grid;
   grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
