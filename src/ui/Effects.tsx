@@ -1,27 +1,33 @@
 import { useEffect, useState } from 'react';
 import { useGestureStore } from '../store/gestureStore';
 
-/** 명령 실행 순간의 화면 이펙트: 상단 토스트 + 짧은 테두리 플래시 */
+const SHOW_MS = 1000;
+const LEAVE_MS = 150; // = --duration-fast
+
+/**
+ * 명령 실행 순간의 토스트. 진입 220ms(opacity + translateY 8px), 퇴장 150ms(opacity).
+ * prefers-reduced-motion이면 CSS에서 이동을 빼고 opacity만 남긴다 (§7).
+ */
 export function Effects() {
   const effect = useGestureStore((s) => s.effect);
-  const [visible, setVisible] = useState(false);
+  const [phase, setPhase] = useState<'hidden' | 'shown' | 'leaving'>('hidden');
 
   useEffect(() => {
     if (!effect) return;
-    setVisible(true);
-    const id = window.setTimeout(() => setVisible(false), 900);
-    return () => window.clearTimeout(id);
+    setPhase('shown');
+    const t1 = window.setTimeout(() => setPhase('leaving'), SHOW_MS);
+    const t2 = window.setTimeout(() => setPhase('hidden'), SHOW_MS + LEAVE_MS);
+    return () => {
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+    };
   }, [effect]);
 
-  if (!effect || !visible) return null;
+  if (!effect || phase === 'hidden') return null;
   return (
-    <>
-      <div key={`flash-${effect.at}`} className={`fx-flash fx-${effect.tone}`} aria-hidden />
-      <div key={`toast-${effect.at}`} className={`fx-toast fx-${effect.tone}`} role="status">
-        <span className="fx-gesture">{effect.gestureLabel}</span>
-        <span className="fx-arrow">→</span>
-        <span className="fx-command">{effect.label}</span>
-      </div>
-    </>
+    <div key={effect.at} className={`fx-toast fx-${effect.tone} ${phase === 'leaving' ? 'is-leaving' : ''}`} role="status">
+      <span className="fx-gesture t-body-2">{effect.gestureLabel}</span>
+      <span className="fx-command t-body-2">{effect.label}</span>
+    </div>
   );
 }

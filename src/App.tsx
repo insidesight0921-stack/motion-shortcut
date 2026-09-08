@@ -11,6 +11,7 @@ import { DevPanel } from './ui/DevPanel';
 import { Effects } from './ui/Effects';
 import { EventLog } from './ui/EventLog';
 import { GESTURE_LABEL, Hud } from './ui/Hud';
+import { IconSoundOff, IconSoundOn } from './ui/icons';
 import { MappingTable } from './ui/MappingTable';
 import { useActivationShortcut } from './ui/shortcuts';
 import { playSound, setMuted, unlockAudio } from './ui/sound';
@@ -101,31 +102,44 @@ export default function App() {
 
   return (
     <div className="app">
-      <header className="app-header">
-        <h1>모션 단축키</h1>
-        <span className="app-subtitle">{cookingMode.name} · 1차 초안</span>
-        <div className="app-header-right">
-          <button type="button" onClick={() => setMutedState(!muted)} title="효과음 켜기/끄기">
-            {muted ? '🔇 효과음 꺼짐' : '🔊 효과음'}
-          </button>
-          <ActivationToggle />
+      <header className="topbar">
+        <div className="container topbar-inner">
+          <div className="topbar-title">
+            <h1 className="t-title-2">모션 단축키</h1>
+            <p className="t-caption t-muted">{cookingMode.name} · 1차 초안</p>
+          </div>
+          <div className="topbar-actions">
+            <ActivationToggle />
+            <button
+              type="button"
+              className="btn btn-ghost btn-icon"
+              onClick={() => setMutedState(!muted)}
+              aria-pressed={muted}
+              aria-label={muted ? '효과음 켜기' : '효과음 끄기'}
+              title={muted ? '효과음 켜기' : '효과음 끄기'}
+            >
+              {muted ? <IconSoundOff /> : <IconSoundOn />}
+            </button>
+          </div>
         </div>
       </header>
-      <main className="layout">
-        <section className="panel panel-left">
+
+      <main className="container layout">
+        <div className="col">
           <CameraView session={session} />
           <Hud />
-        </section>
-        <section className="panel panel-right">
+        </div>
+        <div className="col">
           <CookingMode onTimerDone={() => playSound('timerDone')} />
-        </section>
-        <section className="panel panel-bottom">
+        </div>
+        <div className="row-full">
           <MappingTable mode={cookingMode} />
-        </section>
-        <section className="panel panel-bottom">
+        </div>
+        <div className="row-full">
           <EventLog />
-        </section>
+        </div>
       </main>
+
       <Effects />
       <DevPanel />
     </div>

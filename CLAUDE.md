@@ -68,6 +68,7 @@ docs/
 
 ## 작업 시 규칙 (Claude Code용)
 
+- **UI 코드를 쓰기 전에 `docs/DESIGN.md`를 읽고 §10 체크리스트 10개 항목을 통과시킬 것.** 색·간격·radius·폰트 크기·모션은 `src/styles/tokens.css`의 토큰만 쓴다. 원시 hex와 스케일 밖 px 금지. DESIGN.md에 없는 값이 필요하면 만들지 말고 사용자에게 묻는다.
 - 임계값을 바꿀 때는 `config.ts`의 `DEFAULT_CONFIG`와 `CONFIG_RANGES`를 함께 고치고, `docs/GESTURES.md`의 표도 갱신한다. 새 키를 추가하면 `config.test.ts`가 범위 누락을 잡는다.
 - 새 판정 규칙을 넣으면 `src/gesture/__tests__/fixtures.ts`의 합성 손으로 테스트를 먼저 쓴다. 테스트가 실패하면 코드와 픽스처 둘 다 의심한다(T-002).
 - 좌우 방향 버그는 임계값으로 고치지 않는다. `vision/mirror.ts`가 유일한 반전 지점인지부터 확인한다(D-003).

@@ -1,153 +1,161 @@
-:root {
-  color-scheme: dark;
-  --bg: #111318;
-  --panel: #1b1f27;
-  --panel-2: #232936;
-  --border: #2a3040;
-  --text: #e8ebf1;
-  --muted: #98a2b3;
-  --accent: #4f8cff;
-  --ok: #38c172;
-  --warn: #f5a623;
-  --danger: #ef5350;
-  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif;
-}
+/*
+ * 화면 배치와 컴포넌트별 스타일. 값은 전부 src/styles/tokens.css 토큰만 쓴다 (docs/DESIGN.md).
+ * 공용 버튼/입력/카드/타이포는 src/styles/base.css.
+ */
 
-* {
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-
-button {
-  font: inherit;
-  color: var(--text);
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 12px;
-  cursor: pointer;
-}
-
-button:hover:not(:disabled) {
-  border-color: var(--accent);
-}
-
-button:disabled {
-  opacity: 0.5;
-  cursor: default;
-}
-
+/* ---------- 레이아웃 (§5, §9) ---------- */
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-.app-header {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--border);
+.container {
+  width: 100%;
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--space-20);
 }
 
-.app-header h1 {
-  font-size: 20px;
-  margin: 0;
+@media (min-width: 640px) {
+  .container {
+    padding: 0 var(--space-24);
+  }
 }
 
-.app-subtitle {
-  color: var(--muted);
-  font-size: 13px;
+.topbar {
+  background: var(--surface-card);
+  border-bottom: 1px solid var(--border-default);
 }
 
-.app-header-right {
-  margin-left: auto;
+.topbar-inner {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: space-between;
+  gap: var(--space-16);
+  min-height: var(--space-64);
+  padding-top: var(--space-8);
+  padding-bottom: var(--space-8);
 }
 
-/* 활성화 토글 */
-.activation-toggle {
-  display: inline-flex;
+.topbar-title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.topbar-title h1,
+.topbar-title p {
+  white-space: nowrap;
+}
+
+/* sm: 단축키 배지는 숨겨 제목과 토글이 한 줄에 들어가게 한다 (모바일에 물리 키보드가 없기도 하다) */
+@media (max-width: 639px) {
+  .activation-toggle kbd {
+    display: none;
+  }
+
+  .topbar-title p {
+    display: none;
+  }
+}
+
+.topbar-actions {
+  display: flex;
   align-items: center;
-  gap: 8px;
-  font-weight: 600;
-  font-size: 13px;
-}
-
-.activation-toggle kbd {
-  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
-  color: var(--muted);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1px 5px;
-}
-
-.activation-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--muted);
-}
-
-.activation-toggle.is-on {
-  border-color: rgba(56, 193, 114, 0.6);
-}
-
-.activation-toggle.is-on .activation-dot {
-  background: var(--ok);
-  box-shadow: 0 0 8px rgba(56, 193, 114, 0.7);
-}
-
-.activation-toggle.is-off {
-  border-color: rgba(239, 83, 80, 0.6);
-}
-
-.activation-toggle.is-off .activation-dot {
-  background: var(--danger);
+  gap: var(--space-8);
 }
 
 .layout {
   display: grid;
-  grid-template-columns: minmax(320px, 1fr) minmax(320px, 1fr);
-  gap: 16px;
-  padding: 16px;
-  align-items: start;
+  grid-template-columns: 1fr;
+  gap: var(--space-20);
+  padding-top: var(--space-20);
+  padding-bottom: var(--space-40);
 }
 
-@media (max-width: 900px) {
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-20);
+  min-width: 0;
+}
+
+.row-full {
+  min-width: 0;
+}
+
+/* lg 이상: 카메라 | 요리 모드 2컬럼, 하단 표는 전체 폭 */
+@media (min-width: 1024px) {
   .layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-24);
+    padding-top: var(--space-24);
+    padding-bottom: var(--space-64);
+  }
+
+  .row-full {
+    grid-column: 1 / -1;
   }
 }
 
-.panel {
-  background: var(--panel);
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 12px;
+/* sm: 주요 버튼이 하단 고정 영역으로 가므로 본문 아래 여백 확보 */
+@media (max-width: 639px) {
+  .layout {
+    padding-bottom: calc(var(--control-lg) + var(--space-48));
+  }
 }
 
-.placeholder {
-  color: var(--muted);
+/* ---------- 상태 점, kbd ---------- */
+.status-dot {
+  display: inline-block;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
 }
 
-/* 카메라 */
+kbd {
+  font-family: var(--font-mono);
+  font-size: var(--type-micro-size);
+  line-height: var(--type-micro-lh);
+  color: var(--text-subtle);
+  background: var(--bg-muted);
+  border-radius: var(--radius-8);
+  padding: var(--space-2) var(--space-8);
+}
+
+/* ---------- 활성화 토글 (§2.4: 색 + 텍스트 동반) ---------- */
+.activation-toggle.is-on {
+  color: var(--text-success);
+}
+
+.activation-toggle.is-off {
+  color: var(--text-muted);
+}
+
+.activation-toggle:hover {
+  background: var(--bg-subtle);
+}
+
+.activation-toggle kbd {
+  margin-left: var(--space-4);
+}
+
+/* ---------- 카메라 카드 ---------- */
 .camera-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
-  background: #000;
-  border-radius: 8px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-12);
   overflow: hidden;
+}
+
+.camera-frame.is-running {
+  background: var(--text-default); /* 영상 레터박스. 다크·라이트 모두 어두운 면 */
 }
 
 .camera-video {
@@ -156,7 +164,7 @@ button:disabled {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  /* 거울 모드: 비디오만 뒤집는다. 캔버스는 뒤집지 않는다 (좌표가 이미 사용자 시점). */
+  /* 거울 모드: 비디오만 뒤집는다. 캔버스는 뒤집지 않는다 (좌표가 이미 사용자 시점, D-003). */
   transform: scaleX(-1);
 }
 
@@ -169,97 +177,109 @@ button:disabled {
   pointer-events: none;
 }
 
-.camera-placeholder {
+/* 빈 상태·오류: 텍스트 3줄 이하라 중앙 정렬 허용 (§5) */
+.camera-state {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  padding: var(--space-24);
+  text-align: center;
+}
+
+.camera-state .reading {
+  max-width: 28em;
+}
+
+/* 로딩: 실제 화면 모양의 스켈레톤 */
+.camera-skeleton {
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
-  color: var(--muted);
-  text-align: center;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.55);
+  grid-template-rows: 1fr auto;
+  gap: var(--space-12);
+  padding: var(--space-20);
 }
 
-.camera-error {
-  color: var(--danger);
+.camera-skeleton-hand {
+  width: 40%;
+  height: 55%;
+  align-self: center;
+  justify-self: center;
+  border-radius: var(--radius-20);
 }
 
-.camera-controls {
+.camera-skeleton-lines {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.camera-skeleton-lines .skeleton {
+  height: var(--space-12);
+  flex: 1;
+}
+
+.camera-meta {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  font-size: 13px;
+  gap: var(--space-8) var(--space-16);
+  margin-top: var(--space-16);
+  min-height: var(--type-caption-lh);
 }
 
 .camera-stat {
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--text-subtle);
 }
 
 .camera-stat.is-on {
-  color: var(--ok);
+  color: var(--text-default);
 }
 
-.camera-hint {
-  color: var(--muted);
-  margin-left: auto;
-  font-size: 12px;
+.camera-actions {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
 }
 
-/* HUD */
-.hud {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 8px;
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 8px 16px;
-  align-items: center;
-  transition: border-color 150ms;
+/* sm: 주요 행동은 하단 고정 영역 (§9) */
+@media (max-width: 639px) {
+  .camera-actions {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 30;
+    margin: 0;
+    padding: var(--space-12) var(--space-20);
+    background: var(--surface-card);
+    border-top: 1px solid var(--border-default);
+  }
+
+  .camera-actions .btn {
+    flex: 1;
+    height: var(--control-lg);
+    font-size: var(--type-body-1-size);
+  }
 }
 
-.hud-armed {
-  border-color: var(--warn);
-}
-
-.hud-cooldown {
-  border-color: #3a4256;
-}
-
-.hud-badge {
-  grid-column: 1 / -1;
-  justify-self: start;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 3px 10px;
-  border-radius: 999px;
-  letter-spacing: 0.02em;
-}
-
-.hud-badge.is-on {
-  background: rgba(56, 193, 114, 0.15);
-  color: var(--ok);
-  border: 1px solid rgba(56, 193, 114, 0.5);
-}
-
-.hud-badge.is-off {
-  background: rgba(239, 83, 80, 0.12);
-  color: var(--danger);
-  border: 1px solid rgba(239, 83, 80, 0.5);
-}
-
+/* ---------- HUD 카드 ---------- */
 .hud-main {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--space-16);
 }
 
 .hud-ring {
-  width: 64px;
-  height: 64px;
+  width: var(--space-64);
+  height: var(--space-64);
+  flex: none;
   transform: rotate(-90deg);
 }
 
@@ -269,153 +289,296 @@ button:disabled {
 }
 
 .hud-ring-track {
-  stroke: #2f3746;
+  stroke: var(--border-default);
 }
 
+/* 유지 진행 링: 애니메이션이 아니라 상태 표시. 60ms 전환은 프레임 간 보간용 (DESIGN.md 적용 노트) */
 .hud-ring-progress {
-  stroke: var(--accent);
+  stroke: var(--brand-accent);
   stroke-linecap: round;
   transition: stroke-dashoffset 60ms linear;
 }
 
-.hud-armed .hud-ring-progress {
-  stroke: var(--warn);
-}
-
 .hud-ring-cooldown {
-  stroke: #566178;
+  stroke: var(--border-strong);
   stroke-linecap: round;
 }
 
-.hud-phase {
-  font-size: 12px;
-  color: var(--muted);
+.hud-text {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
 }
 
-.hud-candidate {
-  font-size: 18px;
+.hud-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
   font-weight: 600;
 }
 
+.hud-badge.is-on {
+  color: var(--text-success);
+}
+
+.hud-badge.is-off {
+  color: var(--text-muted);
+}
+
 .hud-stats {
-  margin: 0;
   display: grid;
-  grid-template-columns: auto auto;
-  gap: 2px 10px;
-  font-size: 12px;
-  align-self: start;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4) var(--space-12);
+  margin-top: var(--space-16);
 }
 
 .hud-stats dt {
-  color: var(--muted);
+  color: var(--text-subtle);
 }
 
-.hud-stats dd {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
-}
-
-/* 요리 모드 */
-.cooking {
+/* ---------- 실행 이펙트 토스트 (§7: transform/opacity, 220ms 이하, 8px 이하) ---------- */
+.fx-toast {
+  position: fixed;
+  top: var(--space-80);
+  left: 50%;
+  z-index: 40;
   display: flex;
-  flex-direction: column;
-  gap: 14px;
+  align-items: center;
+  gap: var(--space-8);
+  padding: var(--space-12) var(--space-20);
+  border-radius: var(--radius-12);
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+  box-shadow: var(--elevation-2);
+  pointer-events: none;
+  transform: translateX(-50%);
+  animation: fx-enter var(--duration-base) var(--ease-out) both;
 }
 
-.recipe-head {
+.fx-toast.is-leaving {
+  animation: fx-leave var(--duration-fast) var(--ease-in) both;
+}
+
+.fx-toast.fx-ok {
+  border-color: var(--brand-accent);
+}
+
+.fx-toast.fx-on .fx-command {
+  color: var(--text-success);
+}
+
+.fx-toast.fx-off .fx-command,
+.fx-toast.fx-noop .fx-command {
+  color: var(--text-subtle);
+}
+
+.fx-gesture {
+  color: var(--text-subtle);
+}
+
+.fx-command {
+  font-weight: 600;
+}
+
+@keyframes fx-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@keyframes fx-leave {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ---------- 표 공통: 매핑·로그 (sm에서는 카드 리스트로 재배치, §9) ---------- */
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
+}
+
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: var(--space-12) var(--space-8);
+  border-bottom: 1px solid var(--border-default);
+  vertical-align: top;
+}
+
+.data-table th {
+  color: var(--text-subtle);
+  font-weight: 500;
+}
+
+.data-table tr:last-child td {
+  border-bottom: 0;
+}
+
+.table-scroll {
+  overflow-x: auto;
+}
+
+@media (max-width: 639px) {
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody,
+  .data-table tr,
+  .data-table td {
+    display: block;
+  }
+
+  .data-table tr {
+    padding: var(--space-12) 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  .data-table tr:last-child {
+    border-bottom: 0;
+  }
+
+  .data-table td {
+    display: flex;
+    gap: var(--space-8);
+    padding: var(--space-2) 0;
+    border: 0;
+  }
+
+  .data-table td::before {
+    content: attr(data-label);
+    flex: none;
+    width: var(--space-64);
+    color: var(--text-subtle);
+  }
+
+  .data-table td:empty {
+    display: none;
+  }
+}
+
+/* 로그 결과: 실행 = text-default, 변화 없음 = text-subtle, 무시 = text-muted (상태색은 오류에만) */
+.log-row-executed {
+  color: var(--text-default);
+}
+
+.log-row-noop {
+  color: var(--text-subtle);
+}
+
+.log-row-ignored {
+  color: var(--text-muted);
+}
+
+.log-scroll {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.log-actions {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-.recipe-title {
-  font-size: 16px;
-  margin: 0;
+.log-empty {
+  padding: var(--space-24) 0;
+  text-align: center;
+  color: var(--text-subtle);
 }
 
-.recipe-progress {
-  color: var(--muted);
-  font-variant-numeric: tabular-nums;
-}
-
+/* ---------- 레시피 카드 ---------- */
 .recipe-current {
-  margin-top: 8px;
-  padding: 14px 16px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(79, 140, 255, 0.18), rgba(79, 140, 255, 0.04));
-  border: 1px solid rgba(79, 140, 255, 0.45);
-  animation: step-in 220ms ease-out;
+  padding: var(--space-16) var(--space-20);
+  border-radius: var(--radius-12);
+  background: var(--bg-brand-weak);
+  animation: step-in var(--duration-base) var(--ease-out) both;
+}
+
+.recipe-current-label {
+  color: var(--text-subtle);
+}
+
+.recipe-current-title {
+  margin: var(--space-4) 0 var(--space-8);
+}
+
+.recipe-nav {
+  display: flex;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
+}
+
+.recipe-nav .btn {
+  flex: 1;
+}
+
+.recipe-hint {
+  margin-top: var(--space-8);
+  color: var(--text-muted);
+}
+
+.recipe-list {
+  list-style: none;
+  padding: 0;
+  margin-top: var(--space-16);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--space-4);
+}
+
+.recipe-list .btn {
+  width: 100%;
+  justify-content: flex-start;
+  text-align: left;
+  white-space: normal;
+  height: auto;
+  min-height: var(--control-md);
+  padding: var(--space-8) var(--space-12);
+  font-weight: 400;
+  color: var(--text-muted);
+}
+
+.recipe-list .is-done .btn {
+  color: var(--text-subtle);
+}
+
+.recipe-list .is-current .btn {
+  background: var(--bg-brand-weak);
+  color: var(--text-brand);
+  font-weight: 600;
 }
 
 @keyframes step-in {
   from {
     opacity: 0;
-    transform: translateY(4px);
+    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: none;
+    transform: translateY(0);
   }
 }
 
-.recipe-current-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.recipe-current-title {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 4px 0 6px;
-}
-
-.recipe-current-detail {
-  margin: 0;
-  line-height: 1.5;
-}
-
-.recipe-nav {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 8px;
-}
-
-.recipe-list {
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  gap: 6px;
-}
-
-.recipe-list li button {
-  width: 100%;
-  text-align: left;
-  font-size: 12px;
-  padding: 6px 8px;
-  color: var(--muted);
-}
-
-.recipe-list li.is-done button {
-  color: var(--text);
-  opacity: 0.7;
-}
-
-.recipe-list li.is-current button {
-  color: var(--text);
-  border-color: var(--accent);
-  background: rgba(79, 140, 255, 0.12);
-}
-
-/* YouTube */
+/* ---------- YouTube 카드 ---------- */
 .yt-frame {
   position: relative;
   width: 100%;
   aspect-ratio: 16 / 9;
-  background: #000;
-  border-radius: 8px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-12);
   overflow: hidden;
 }
 
@@ -426,286 +589,79 @@ button:disabled {
   inset: 0;
   width: 100%;
   height: 100%;
+  border: 0;
 }
 
-.yt-placeholder {
+.yt-skeleton {
   position: absolute;
   inset: 0;
-  display: grid;
-  place-items: center;
-  color: var(--muted);
+  border-radius: 0;
 }
 
-.yt-controls {
+.yt-form {
+  margin-top: var(--space-16);
+}
+
+.yt-form-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-  margin-top: 8px;
-  font-size: 13px;
+  gap: var(--space-8);
 }
 
-.yt-state {
-  color: var(--muted);
-  min-width: 70px;
-}
-
-.yt-state.is-on {
-  color: var(--ok);
-}
-
-.yt-input {
+.yt-form-row .input {
   flex: 1;
-  min-width: 180px;
-  font: inherit;
-  color: var(--text);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 6px 8px;
+  min-width: 0;
 }
 
-.yt-error {
-  color: var(--danger);
-  width: 100%;
-  font-size: 12px;
+.yt-form-row .btn {
+  height: var(--control-lg);
+  flex: none;
 }
 
-/* 타이머 */
-.timer {
-  position: relative;
-  overflow: hidden;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--panel-2);
-}
-
-.timer-running {
-  border-color: var(--warn);
-}
-
-.timer-done {
-  border-color: var(--ok);
-  animation: timer-flash 700ms ease-in-out 3;
-}
-
-@keyframes timer-flash {
-  50% {
-    background: rgba(56, 193, 114, 0.25);
-  }
-}
-
-.timer-bar {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: rgba(245, 166, 35, 0.18);
-  transition: width 200ms linear;
-}
-
-.timer-body {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-}
-
-.timer-label {
-  color: var(--muted);
-  font-size: 13px;
-}
-
+/* ---------- 타이머 카드 ---------- */
 .timer-time {
-  font-size: 30px;
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  margin-left: auto;
+  margin-top: var(--space-8);
+}
+
+.timer-time.is-done {
+  color: var(--text-success);
+}
+
+.timer-track {
+  height: var(--space-8);
+  margin-top: var(--space-12);
+  border-radius: var(--radius-8);
+  background: var(--bg-muted);
+  overflow: hidden;
+}
+
+/* width 대신 transform: scaleX (§7 레이아웃 속성 애니메이션 금지) */
+.timer-fill {
+  height: 100%;
+  background: var(--brand-accent);
+  transform-origin: left center;
+  transition: transform var(--duration-base) linear;
 }
 
 .timer-actions {
   display: flex;
-  gap: 6px;
+  gap: var(--space-8);
+  margin-top: var(--space-16);
 }
 
-/* 하단 패널 */
-.panel-bottom {
-  min-width: 0;
-}
-
-.muted {
-  color: var(--muted);
-}
-
-.small {
-  font-size: 12px;
-}
-
-.mono {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-.mapping h3,
-.log h3 {
-  margin: 0 0 8px;
-  font-size: 15px;
-}
-
-.mapping-table,
-.log-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 13px;
-}
-
-.mapping-table th,
-.mapping-table td,
-.log-table th,
-.log-table td {
-  text-align: left;
-  padding: 6px 8px;
-  border-bottom: 1px solid var(--border);
-  vertical-align: top;
-}
-
-.mapping-table th,
-.log-table th {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 12px;
-}
-
-/* 로그 */
-.log-head {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.log-count {
-  color: var(--muted);
-  font-size: 12px;
-}
-
-.log-actions {
-  margin-left: auto;
-  display: flex;
-  gap: 6px;
-}
-
-.log-table-wrap {
-  max-height: 320px;
-  overflow: auto;
-  margin-top: 8px;
-}
-
-.log-empty {
-  color: var(--muted);
-  text-align: center;
-  padding: 20px !important;
-}
-
-.log-executed td:nth-child(4) {
-  color: var(--ok);
-}
-
-.log-noop td:nth-child(4) {
-  color: var(--warn);
-}
-
-.log-ignored td {
-  color: var(--muted);
-}
-
-/* 이펙트 */
-.fx-flash {
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  box-shadow: inset 0 0 0 4px var(--fx, var(--accent));
-  animation: fx-flash 700ms ease-out forwards;
-  z-index: 40;
-}
-
-.fx-toast {
-  position: fixed;
-  top: 64px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  padding: 10px 18px;
-  border-radius: 999px;
-  background: var(--panel-2);
-  border: 1px solid var(--fx, var(--accent));
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.4);
-  font-size: 15px;
-  animation: fx-toast 900ms ease-out forwards;
-  z-index: 41;
-  pointer-events: none;
-}
-
-.fx-ok {
-  --fx: var(--accent);
-}
-
-.fx-on {
-  --fx: var(--ok);
-}
-
-.fx-off {
-  --fx: var(--danger);
-}
-
-.fx-noop {
-  --fx: var(--warn);
-}
-
-.fx-gesture {
-  color: var(--muted);
-}
-
-.fx-command {
-  font-weight: 600;
-}
-
-@keyframes fx-flash {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-@keyframes fx-toast {
-  0% {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-6px) scale(0.96);
-  }
-  12% {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
-  }
-  80% {
-    opacity: 1;
-  }
-  100% {
-    opacity: 0;
-  }
-}
-
-/* 개발 패널 */
+/* ---------- 개발 패널 (개발자용: 토큰만 지킨다, 기본 접힘, Ghost로 열기) ---------- */
 .dev-toggle {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
-  z-index: 50;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  right: var(--space-16);
+  bottom: var(--space-16);
+  z-index: 35;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-default);
+}
+
+@media (max-width: 639px) {
+  .dev-toggle {
+    bottom: calc(var(--control-lg) + var(--space-40));
+  }
 }
 
 .dev-panel {
@@ -713,73 +669,69 @@ button:disabled {
   top: 0;
   right: 0;
   bottom: 0;
+  z-index: 45;
   width: min(420px, 100vw);
   overflow: auto;
-  background: var(--panel);
-  border-left: 1px solid var(--border);
-  padding: 14px 14px 64px;
-  z-index: 45;
-  font-size: 13px;
+  padding: var(--space-16) var(--space-16) var(--space-80);
+  background: var(--surface-raised);
+  border-left: 1px solid var(--border-default);
+  box-shadow: var(--elevation-3);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
 }
 
 .dev-head {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  gap: var(--space-4);
+  margin-bottom: var(--space-12);
 }
 
-.dev-head strong {
+.dev-head .t-title-3 {
   margin-right: auto;
 }
 
 .dev-scores {
-  background: var(--panel-2);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 8px 10px;
-  margin-bottom: 12px;
+  background: var(--bg-muted);
+  border-radius: var(--radius-12);
+  padding: var(--space-12);
+  margin-bottom: var(--space-16);
 }
 
 .dev-scores dl {
-  margin: 6px 0 0;
+  margin-top: var(--space-8);
   display: grid;
   grid-template-columns: auto 1fr;
-  gap: 2px 10px;
-  font-size: 12px;
+  gap: var(--space-4) var(--space-12);
 }
 
 .dev-scores dt {
-  color: var(--muted);
+  color: var(--text-subtle); /* 회색 면 위에서는 muted 대신 subtle (§2.4) */
 }
 
 .dev-scores dd {
-  margin: 0;
   word-break: break-all;
 }
 
 .dev-group h4 {
-  margin: 12px 0 6px;
-  font-size: 12px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  margin: var(--space-16) 0 var(--space-8);
+  color: var(--text-subtle);
 }
 
 .dev-row {
   display: grid;
-  grid-template-columns: 1fr 120px 52px;
+  grid-template-columns: 1fr var(--space-120) var(--space-48);
   align-items: center;
-  gap: 8px;
-  padding: 3px 0;
+  gap: var(--space-8);
+  min-height: var(--space-32);
 }
 
 .dev-row.is-changed .dev-label {
-  color: var(--warn);
+  color: var(--text-brand);
+  font-weight: 600;
 }
 
 .dev-label {
-  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -787,9 +739,33 @@ button:disabled {
 
 .dev-row input[type='range'] {
   width: 100%;
+  accent-color: var(--brand-accent);
 }
 
 .dev-value {
   text-align: right;
-  font-size: 12px;
+}
+
+/* ---------- reduced motion (§7 필수): 이동은 제거하고 opacity만 ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .fx-toast {
+    animation: fx-leave var(--duration-base) var(--ease-standard) reverse both;
+  }
+
+  .fx-toast.is-leaving {
+    animation: fx-leave var(--duration-fast) var(--ease-in) both;
+  }
+
+  .recipe-current {
+    animation: fx-leave var(--duration-base) var(--ease-standard) reverse both;
+  }
+
+  .timer-fill,
+  .hud-ring-progress {
+    transition: none;
+  }
+
+  .btn:active {
+    transform: none;
+  }
 }

@@ -1,0 +1,210 @@
+/*
+ * 디자인 토큰 — docs/DESIGN.md 의 단일 출처.
+ * 컴포넌트 CSS는 이 변수만 참조한다. 원시 hex·스케일 밖 px 금지 (CLAUDE.md 규칙).
+ *
+ * 테마: 기본은 시스템 설정(prefers-color-scheme). <html data-theme="light|dark"> 가 있으면 그것이 우선.
+ */
+
+/* ---------- §2.2 Light (기본) ---------- */
+:root {
+  color-scheme: light;
+
+  --bg-default: #ffffff;
+  --bg-subtle: #f9fafb;
+  --bg-muted: #f2f4f6;
+  --bg-brand: #1b64da;
+  --brand-accent: #3182f6;
+  --bg-brand-weak: #ebf3fe;
+
+  --text-default: #191f28;
+  --text-subtle: #4e5968;
+  --text-muted: #6b7684;
+  --text-disabled: #b0b8c1;
+  --text-on-brand: #ffffff;
+  --text-brand: #1b64da;
+
+  --border-default: #e5e8eb;
+  --border-strong: #8b95a1;
+
+  --bg-success: #15c47e;
+  --text-success: #08805a;
+  --bg-warning: #ff9500;
+  --text-warning: #9a5a00;
+  --bg-danger: #f04452;
+  --text-danger: #d6303e;
+
+  --icon-subtle: var(--text-subtle);
+
+  /*
+   * 면 역할 별칭. 라이트: 페이지 bg-subtle 위에 흰 카드(bg-default).
+   * 다크: §2.3 "면이 위로 올라갈수록 밝아진다" — 페이지 바닥 bg-default, 카드 bg-subtle, 떠 있는 면 bg-muted.
+   * 컴포넌트는 이 별칭을 쓰고 테마별 뒤집힘은 여기서만 처리한다.
+   */
+  --surface-page: var(--bg-subtle);
+  --surface-card: var(--bg-default);
+  --surface-raised: var(--bg-default);
+
+  /* §4 Input focus 틴트: 브랜드 8% */
+  --focus-ring: 0 0 0 3px rgba(49, 130, 246, 0.08);
+  --focus-outline: var(--brand-accent);
+
+  /* 모달 dim — 라이트/다크 동일 */
+  --dim: rgba(0, 0, 0, 0.5);
+
+  /* ---------- §6 Elevation (light) ---------- */
+  --elevation-0: none;
+  --elevation-1: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --elevation-2: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --elevation-3: 0 12px 32px rgba(0, 0, 0, 0.12);
+
+  /* ---------- §3.1 폰트 ---------- */
+  --font-sans:
+    'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Segoe UI',
+    Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* ---------- §3.2 타이포 스케일 (size / line-height / weight / letter-spacing) ---------- */
+  --type-display-size: 32px;
+  --type-display-lh: 42px;
+  --type-display-weight: 700;
+  --type-display-ls: -0.03em;
+
+  --type-title-1-size: 26px;
+  --type-title-1-lh: 35px;
+  --type-title-1-weight: 700;
+  --type-title-1-ls: -0.02em;
+
+  --type-title-2-size: 22px;
+  --type-title-2-lh: 31px;
+  --type-title-2-weight: 600;
+
+  --type-title-3-size: 18px;
+  --type-title-3-lh: 26px;
+  --type-title-3-weight: 600;
+
+  --type-body-1-size: 17px;
+  --type-body-1-lh: 26px;
+  --type-body-1-weight: 400;
+
+  --type-body-2-size: 15px;
+  --type-body-2-lh: 23px;
+  --type-body-2-weight: 400;
+
+  --type-caption-size: 13px;
+  --type-caption-lh: 20px;
+  --type-caption-weight: 400;
+
+  --type-micro-size: 11px;
+  --type-micro-lh: 16px;
+  --type-micro-weight: 500;
+
+  /* ---------- §5 간격 스케일 (4px 배수) ---------- */
+  --space-2: 2px;
+  --space-4: 4px;
+  --space-8: 8px;
+  --space-12: 12px;
+  --space-16: 16px;
+  --space-20: 20px;
+  --space-24: 24px;
+  --space-32: 32px;
+  --space-40: 40px;
+  --space-48: 48px;
+  --space-64: 64px;
+  --space-80: 80px;
+  --space-120: 120px;
+
+  /* ---------- §4 radius ---------- */
+  --radius-8: 8px;
+  --radius-12: 12px;
+  --radius-16: 16px;
+  --radius-20: 20px;
+
+  /* ---------- §4 컨트롤 높이 ---------- */
+  --control-lg: 52px;
+  --control-md: 44px;
+  --control-sm: 36px;
+
+  /* ---------- §5 컨테이너 ---------- */
+  --container-max: 1120px;
+  --container-reading: 680px;
+
+  /* ---------- §7.1 모션 ---------- */
+  --duration-fast: 150ms;
+  --duration-base: 220ms;
+  --duration-slow: 320ms;
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in: cubic-bezier(0.4, 0, 1, 1);
+}
+
+/* ---------- §2.3 Dark — 반전이 아니라 별도 스케일 ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+
+    --bg-default: #16181d;
+    --bg-subtle: #1c1f26;
+    --bg-muted: #242830;
+    --bg-brand: #2563eb;
+    --brand-accent: #5a9cff;
+    --bg-brand-weak: #1b2a44;
+
+    --text-default: #edeff2;
+    --text-subtle: #a8b0ba;
+    --text-muted: #868e99;
+    --text-disabled: #5a616b;
+    --text-brand: #7fb0ff;
+
+    --border-default: #2b303a;
+    --border-strong: #4a515c;
+
+    --text-success: #3dd69b;
+    --text-warning: #ffb340;
+    --text-danger: #ff6b75;
+
+    --focus-ring: 0 0 0 3px rgba(90, 156, 255, 0.16);
+
+    --surface-page: var(--bg-default);
+    --surface-card: var(--bg-subtle);
+    --surface-raised: var(--bg-muted);
+
+    /* 다크 모드에서는 그림자를 쓰지 않는다. 면 밝기로 높이를 표현한다 (§6) */
+    --elevation-1: none;
+    --elevation-2: none;
+    --elevation-3: none;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-default: #16181d;
+  --bg-subtle: #1c1f26;
+  --bg-muted: #242830;
+  --bg-brand: #2563eb;
+  --brand-accent: #5a9cff;
+  --bg-brand-weak: #1b2a44;
+
+  --text-default: #edeff2;
+  --text-subtle: #a8b0ba;
+  --text-muted: #868e99;
+  --text-disabled: #5a616b;
+  --text-brand: #7fb0ff;
+
+  --border-default: #2b303a;
+  --border-strong: #4a515c;
+
+  --text-success: #3dd69b;
+  --text-warning: #ffb340;
+  --text-danger: #ff6b75;
+
+  --focus-ring: 0 0 0 3px rgba(90, 156, 255, 0.16);
+
+  --surface-page: var(--bg-default);
+  --surface-card: var(--bg-subtle);
+  --surface-raised: var(--bg-muted);
+
+  --elevation-1: none;
+  --elevation-2: none;
+  --elevation-3: none;
+}

@@ -96,6 +96,31 @@
 - **결정**: `store/logStore`가 한 줄 형식(`시각 | 제스처 | 명령 | 결과 | 사유`)으로 만들어 화면 표와 `console.log('[motion] …')`에 동시에 쓴다. 최근 200건만 유지.
 - **선택 이유**: 화면은 보기 편하고, 콘솔은 페이지가 멈춰도 남는다. 같은 문자열을 쓰므로 어느 쪽을 복사해도 동일하다. 200건은 30fps에서 무시 로그가 프레임마다 쌓이지 않도록 에피소드당 1회로 줄였기 때문에 충분하다.
 
+## D-014 DESIGN.md 채택 (2026-09-08, feat/design-system)
+
+- **결정**: `docs/DESIGN.md`를 단일 디자인 기준으로 채택. 토큰은 `src/styles/tokens.css` 한 곳(라이트 기본, `prefers-color-scheme: dark`와 `[data-theme]` 모두 지원), 공용 컴포넌트는 `src/styles/base.css`, 화면 배치는 `src/App.css`. 인식·상태 머신·명령·스토어 로직은 변경 없음(테스트 129개 그대로).
+- **바꾼 것**:
+  - 원시 hex 전부 제거 → 시맨틱 토큰. 캔버스 오버레이도 `getComputedStyle`로 `--brand-accent`를 읽음.
+  - 폰트: Pretendard Variable(jsdelivr, 버전 상수 `PRETENDARD_VERSION`), 숫자 자리에 `tabular-nums`, 본문 `word-break: keep-all; overflow-wrap: anywhere`, `title-1` 이상 `-0.02em`.
+  - 버튼: Primary는 "카메라 시작" 하나. 실행 중엔 Secondary "카메라 중지". 나머지는 Secondary/Ghost. 높이 52/44/36, radius 12(36 이하 8), disabled는 opacity 대신 `bg-muted + text-disabled`, `:focus-visible` 링.
+  - 이모지 아이콘(🔊/🔇) → 인라인 SVG(`ui/icons.tsx`, 24px, currentColor). 아이콘 전용 버튼은 aria-label만, 텍스트와 중복 없음.
+  - 카드: 7개 형제 카드(카메라 / 인식 상태 / 레시피 / 영상 / 타이머 / 매핑 / 로그). HUD를 카메라 카드에서 분리. 그림자 0, 테두리 없음, radius 16. 그라데이션 카드 → `bg-brand-weak`.
+  - 상태: ON `text-success`+점, OFF `text-muted`, 항상 "ON/OFF" 텍스트 동반. 로그 실행/변화 없음/무시 = default/subtle/muted. 상태색은 오류에만(+완료 정보).
+  - 빈 상태·로딩(스켈레톤)·오류(구체적 문구 + "다시 시도") 세 화면. 카메라 오류 문구를 "무엇이 왜 안 됐고 무엇을 하면 되는지"로 다시 씀.
+  - 모션: 토스트 진입 220ms(opacity + 8px), 퇴장 150ms. 테두리 플래시·타이머 배경 플래시·`width` 전환 제거(진행 바는 `transform: scaleX`). `prefers-reduced-motion`에서 이동 제거·opacity만.
+  - 반응형: `lg`(1024) 이상 2컬럼, 그 아래 1컬럼. `sm`(≤639)에서 주요 버튼은 하단 고정, 표는 카드 리스트로 재배치.
+- **스케일 밖 값 치환 목록** (구 → 신):
+  | 구분 | 이전 | 이후 |
+  |---|---|---|
+  | 간격 | 3, 5 → 4 / 6 → 8 / 10 → 12 / 14 → 16 / 18 → 20 / 30 → 32 | §5 스케일 |
+  | radius | 6, 10 → 12 (카드 16, 36px 이하 버튼 8, 배지 pill → 8) | §4 |
+  | 글자 | 11 → micro 11 / 12 → caption 13 / 14 → body-2 15 / 16 → body-1 17 / 20 → title-2 22 / 30 → display 32 | §3.2 |
+  | 그림자 | 글로우·`0 6px 24px`·`0 4px 16px` → elevation 0/2/3, 다크는 없음 | §6 |
+  | 모션 | 900·700ms → 220/150ms, `width`·`background`·`box-shadow` 애니메이션 → `transform`/`opacity` | §7 |
+- **예외로 둔 것**(사유는 DESIGN.md 적용 노트): 유지 진행 링(상태 표시, 60ms 보간), 개발 패널(토큰만 준수), 컨테이너 치수(패널 폭 420, 로그 높이 320, 목록 최소 폭 160)는 간격 스케일 대상 밖.
+- **대안**: CSS-in-JS·Tailwind 도입. 외부 UI 라이브러리 금지 결정과 파일 수를 고려해 순수 CSS 변수 유지.
+- **되돌릴 조건**: 디자이너가 별도 토큰을 주면 `tokens.css` 값만 교체. 컴포넌트는 별칭(`--surface-*`)만 참조하므로 다크 매핑 변경도 그 파일 안에서 끝난다.
+
 ## 시행착오
 
 ### T-001 pnpm 11에서 `pnpm test`가 esbuild 빌드 스크립트 때문에 실패 (1단계)

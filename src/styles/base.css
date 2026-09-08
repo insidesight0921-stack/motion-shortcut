@@ -1,0 +1,355 @@
+/*
+ * 기본 스타일 + 공용 컴포넌트 (docs/DESIGN.md §3, §4, §7, §8).
+ * 값은 전부 tokens.css 변수. 화면별 배치는 App.css.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--surface-page);
+  color: var(--text-default);
+  font-family: var(--font-sans);
+  font-size: var(--type-body-2-size);
+  line-height: var(--type-body-2-lh);
+  font-weight: var(--type-body-2-weight);
+  /* §3.3 한글 조판: 어절 중간에서 끊지 않는다 */
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+p,
+dl,
+dd,
+ol,
+ul {
+  margin: 0;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* ---------- §3.2 타이포 유틸 ---------- */
+.t-display {
+  font-size: var(--type-display-size);
+  line-height: var(--type-display-lh);
+  font-weight: var(--type-display-weight);
+  letter-spacing: var(--type-display-ls);
+  text-wrap: balance;
+}
+
+.t-title-1 {
+  font-size: var(--type-title-1-size);
+  line-height: var(--type-title-1-lh);
+  font-weight: var(--type-title-1-weight);
+  letter-spacing: var(--type-title-1-ls);
+  text-wrap: balance;
+}
+
+.t-title-2 {
+  font-size: var(--type-title-2-size);
+  line-height: var(--type-title-2-lh);
+  font-weight: var(--type-title-2-weight);
+  letter-spacing: 0;
+  text-wrap: balance;
+}
+
+.t-title-3 {
+  font-size: var(--type-title-3-size);
+  line-height: var(--type-title-3-lh);
+  font-weight: var(--type-title-3-weight);
+  letter-spacing: 0;
+}
+
+.t-body-1 {
+  font-size: var(--type-body-1-size);
+  line-height: var(--type-body-1-lh);
+  font-weight: var(--type-body-1-weight);
+}
+
+.t-body-2 {
+  font-size: var(--type-body-2-size);
+  line-height: var(--type-body-2-lh);
+  font-weight: var(--type-body-2-weight);
+}
+
+.t-caption {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
+  font-weight: var(--type-caption-weight);
+}
+
+.t-micro {
+  font-size: var(--type-micro-size);
+  line-height: var(--type-micro-lh);
+  font-weight: var(--type-micro-weight);
+}
+
+.t-strong {
+  font-weight: 600;
+}
+
+.t-subtle {
+  color: var(--text-subtle);
+}
+
+.t-muted {
+  color: var(--text-muted);
+}
+
+.t-danger {
+  color: var(--text-danger);
+}
+
+.t-success {
+  color: var(--text-success);
+}
+
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.reading {
+  max-width: 32em;
+}
+
+/* 시각적으로 숨기되 스크린리더에는 남긴다 */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ---------- 포커스 (§4 공통, §8) ---------- */
+:focus-visible {
+  outline: 2px solid var(--focus-outline);
+  outline-offset: 2px;
+}
+
+/* ---------- §4 Button ---------- */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-8);
+  height: var(--control-md);
+  padding: 0 var(--space-16);
+  border: 0;
+  border-radius: var(--radius-12);
+  background: var(--bg-muted);
+  color: var(--text-default);
+  font-size: var(--type-body-2-size);
+  line-height: var(--type-body-2-lh);
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    color var(--duration-fast) var(--ease-standard),
+    transform var(--duration-fast) var(--ease-standard);
+}
+
+.btn:hover {
+  filter: brightness(0.96);
+}
+
+.btn:active {
+  transform: scale(0.98);
+}
+
+.btn:disabled {
+  background: var(--bg-muted);
+  color: var(--text-disabled);
+  cursor: not-allowed;
+  filter: none;
+  transform: none;
+}
+
+.btn-primary {
+  background: var(--bg-brand);
+  color: var(--text-on-brand);
+}
+
+.btn-secondary {
+  background: var(--bg-muted);
+  color: var(--text-default);
+}
+
+.btn-ghost {
+  background: transparent;
+  color: var(--text-subtle);
+}
+
+.btn-ghost:hover {
+  background: var(--bg-muted);
+  filter: none;
+}
+
+.btn-danger {
+  background: var(--bg-danger);
+  color: #ffffff; /* §4 Danger 글자색은 문서 정의값 */
+}
+
+.btn-lg {
+  height: var(--control-lg);
+  padding: 0 var(--space-20);
+  font-size: var(--type-body-1-size);
+}
+
+.btn-sm {
+  height: var(--control-sm);
+  padding: 0 var(--space-12);
+  border-radius: var(--radius-8);
+  font-size: var(--type-caption-size);
+}
+
+/* 아이콘만 있는 버튼: 터치 타겟 44px 유지 (§8) */
+.btn-icon {
+  width: var(--control-md);
+  padding: 0;
+}
+
+.btn-icon.btn-sm {
+  width: var(--control-md);
+  height: var(--control-md);
+}
+
+.btn .icon {
+  width: 24px;
+  height: 24px;
+  flex: none;
+}
+
+/* ---------- §4 Input ---------- */
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.field-label {
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
+  color: var(--text-subtle);
+}
+
+.input {
+  height: var(--control-lg);
+  padding: 0 var(--space-16);
+  border: 1px solid transparent;
+  border-radius: var(--radius-12);
+  background: var(--bg-muted);
+  color: var(--text-default);
+  font-size: var(--type-body-2-size);
+  transition:
+    background-color var(--duration-fast) var(--ease-standard),
+    border-color var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+}
+
+.input::placeholder {
+  color: var(--text-muted);
+}
+
+.input:focus {
+  outline: none;
+  background: var(--surface-card);
+  border-color: var(--border-strong);
+  box-shadow: var(--focus-ring);
+}
+
+.input.is-invalid {
+  border-color: var(--bg-danger);
+}
+
+/* 오류 문구 자리는 항상 확보해 레이아웃이 흔들리지 않게 한다 */
+.field-error {
+  min-height: var(--type-caption-lh);
+  font-size: var(--type-caption-size);
+  line-height: var(--type-caption-lh);
+  color: var(--text-danger);
+}
+
+/* ---------- §4 Card ---------- */
+.card {
+  background: var(--surface-card);
+  border-radius: var(--radius-16);
+  padding: var(--space-20);
+  box-shadow: var(--elevation-0);
+}
+
+@media (min-width: 640px) {
+  .card {
+    padding: var(--space-24);
+  }
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-12);
+  margin-bottom: var(--space-16);
+}
+
+/* ---------- 스켈레톤 (§8 로딩은 스피너보다 스켈레톤) ---------- */
+.skeleton {
+  background: var(--bg-muted);
+  border-radius: var(--radius-8);
+  animation: skeleton-pulse 1.2s var(--ease-standard) infinite; /* 무한 반복은 로딩 인디케이터에만 허용 (§7) */
+}
+
+@keyframes skeleton-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+/* ---------- §7 reduced motion (필수) ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .skeleton {
+    animation: none;
+  }
+}

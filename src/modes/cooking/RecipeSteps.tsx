@@ -1,6 +1,6 @@
 import { useCookingStore } from '../../store/cookingStore';
 
-/** 레시피 단계 카드. 현재 단계를 크게, 나머지는 목록으로. 마우스 폴백 버튼 포함. */
+/** 레시피 카드. 현재 단계를 크게, 나머지는 목록으로. 마우스 폴백 버튼 포함. */
 export function RecipeSteps() {
   const recipe = useCookingStore((s) => s.recipe);
   const stepIndex = useCookingStore((s) => s.stepIndex);
@@ -11,40 +11,43 @@ export function RecipeSteps() {
   const total = recipe.steps.length;
 
   return (
-    <div className="recipe">
-      <div className="recipe-head">
-        <h2 className="recipe-title">{recipe.title}</h2>
-        <span className="recipe-progress">
-          {stepIndex + 1} / {total}
+    <section className="card" aria-labelledby="recipe-title">
+      <div className="card-head">
+        <h2 id="recipe-title" className="t-title-3">
+          {recipe.title}
+        </h2>
+        <span className="t-caption t-muted num">
+          {stepIndex + 1} / {total}단계
         </span>
       </div>
 
-      <div className="recipe-current" key={stepIndex}>
-        <div className="recipe-current-label">
+      <div className="recipe-current" key={stepIndex} aria-live="polite">
+        <p className="recipe-current-label t-caption">
           {stepIndex + 1}단계{current.time ? ` · 약 ${current.time}` : ''}
-        </div>
-        <div className="recipe-current-title">{current.title}</div>
-        <p className="recipe-current-detail">{current.detail}</p>
+        </p>
+        <h3 className="recipe-current-title t-title-2">{current.title}</h3>
+        <p className="t-body-2 reading">{current.detail}</p>
       </div>
 
       <div className="recipe-nav">
-        <button type="button" onClick={() => prevStep()} disabled={stepIndex === 0}>
-          ← 이전 (왼쪽 스와이프)
+        <button type="button" className="btn btn-secondary" onClick={() => prevStep()} disabled={stepIndex === 0}>
+          이전 단계
         </button>
-        <button type="button" onClick={() => nextStep()} disabled={stepIndex === total - 1}>
-          다음 (오른쪽 스와이프) →
+        <button type="button" className="btn btn-secondary" onClick={() => nextStep()} disabled={stepIndex === total - 1}>
+          다음 단계
         </button>
       </div>
+      <p className="recipe-hint t-caption">스와이프로도 이동합니다. 왼쪽은 이전, 오른쪽은 다음.</p>
 
       <ol className="recipe-list">
         {recipe.steps.map((s, i) => (
           <li key={i} className={i === stepIndex ? 'is-current' : i < stepIndex ? 'is-done' : ''}>
-            <button type="button" onClick={() => goToStep(i)}>
-              {s.title}
+            <button type="button" className="btn btn-ghost btn-sm" onClick={() => goToStep(i)} aria-current={i === stepIndex ? 'step' : undefined}>
+              {i + 1}. {s.title}
             </button>
           </li>
         ))}
       </ol>
-    </div>
+    </section>
   );
 }
