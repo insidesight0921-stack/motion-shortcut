@@ -8,7 +8,10 @@ export interface LogEntry {
   id: number;
   /** Date.now() */
   time: number;
-  gesture: GestureId;
+  /** 제스처 항목이면 제스처 id */
+  gesture?: GestureId;
+  /** 제스처가 아닌 항목의 주체 (예: "모드 전환", "음성") */
+  subject?: string;
   result: LogResult;
   /** 실행한(하려던) 명령 이름 */
   command?: string;
@@ -20,7 +23,7 @@ export interface LogEntry {
 
 export const LOG_LIMIT = 200;
 
-const GESTURE_KO: Record<GestureId, string> = {
+export const GESTURE_KO: Record<GestureId, string> = {
   open_palm: '손바닥',
   fist: '주먹',
   swipe_right: '오른쪽 스와이프',
@@ -43,14 +46,19 @@ export function formatTime(t: number): string {
   return `${pad(d.getHours(), 2)}:${pad(d.getMinutes(), 2)}:${pad(d.getSeconds(), 2)}.${pad(d.getMilliseconds(), 3)}`;
 }
 
-/** 한 줄 형식: 시각 | 제스처 | 명령 | 결과 | 사유/비고. 화면·콘솔·복사 모두 이 형식을 쓴다. */
+export function subjectOf(e: Pick<LogEntry, 'gesture' | 'subject'>): string {
+  if (e.gesture) return `${GESTURE_KO[e.gesture]}(${e.gesture})`;
+  return e.subject ?? '-';
+}
+
+/** 한 줄 형식: 시각 | 주체 | 명령 | 결과 | 사유/비고. 화면·콘솔·복사 모두 이 형식을 쓴다. */
 export function formatLogLine(e: LogEntry): string {
   const tail = [e.reason, e.note].filter(Boolean).join(' · ');
-  return `${formatTime(e.time)} | ${GESTURE_KO[e.gesture]}(${e.gesture}) | ${e.command ?? '-'} | ${RESULT_KO[e.result]} | ${tail}`;
+  return `${formatTime(e.time)} | ${subjectOf(e)} | ${e.command ?? '-'} | ${RESULT_KO[e.result]} | ${tail}`;
 }
 
 export function formatLog(entries: LogEntry[]): string {
-  return ['시각 | 제스처 | 명령 | 결과 | 사유/비고', ...entries.map(formatLogLine)].join('\n');
+  return ['시각 | 제스처/주체 | 명령 | 결과 | 사유/비고', ...entries.map(formatLogLine)].join('\n');
 }
 
 interface LogState {

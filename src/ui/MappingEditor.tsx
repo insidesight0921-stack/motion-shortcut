@@ -3,7 +3,10 @@ import { ASSIGNABLE_COMMANDS, COMMANDS } from '../commands/catalog';
 import { runCommand, validateParams } from '../commands/registry';
 import type { CommandId } from '../commands/types';
 import type { GestureId } from '../gesture/types';
+import { hasAnyCommand } from '../mapping/defaults';
 import { GESTURE_ORDER, LOCKED_GESTURE } from '../mapping/types';
+import { MODES } from '../modes/catalog';
+import type { UserModeId } from '../modes/types';
 import { useGestureStore } from '../store/gestureStore';
 import { useLogStore } from '../store/logStore';
 import { useMappingStore } from '../store/mappingStore';
@@ -20,22 +23,29 @@ const GESTURE_ICON: Record<GestureId, (props: { title?: string }) => JSX.Element
   circle: IconGestureCircle,
 };
 
+interface Props {
+  /** 편집할 모드 (standby 는 편집기가 없다) */
+  mode: UserModeId;
+}
+
 /**
- * 제스처 ↔ 명령 매핑 편집기 (이 화면의 핵심). 변경은 즉시 반영되고 localStorage에 저장된다.
+ * 현재 모드의 제스처 ↔ 명령 매핑 편집기. 변경은 즉시 반영되고 localStorage(v2, 모드별)에 저장된다.
  * 주먹은 활성화 on/off 로 고정되어 편집할 수 없다 (잠금 해제 경로 안전장치).
- * data-mapping-editor: key.press 가 이 안의 폼 요소를 대상으로 삼지 않게 하는 표식 (보완 3).
+ * data-mapping-editor: key.press 가 이 안의 폼 요소를 대상으로 삼지 않게 하는 표식 (D-015 보완 3).
  */
-export function MappingEditor() {
-  const mapping = useMappingStore((s) => s.mapping);
+export function MappingEditor({ mode }: Props) {
+  const mapping = useMappingStore((s) => s.byMode[mode]);
   const setCommand = useMappingStore((s) => s.setCommand);
   const setParams = useMappingStore((s) => s.setParams);
   const reset = useMappingStore((s) => s.reset);
   const setCapturing = useMappingStore((s) => s.setCapturing);
   const baseId = useId();
+  const def = MODES[mode];
+  const empty = !hasAnyCommand(mapping);
 
   const test = (gesture: GestureId) => {
     const entry = mapping[gesture];
-    const def = COMMANDS[entry.commandId];
+    const cmd = COMMANDS[entry.commandId];
     const result = runCommand(entry.commandId, entry.params, {
       now: Date.now(),
       toggleEnabled: () => useGestureStore.getState().toggleEnabled(),
@@ -44,13 +54,13 @@ export function MappingEditor() {
     useLogStore.getState().add({
       gesture,
       result: status,
-      command: def.name,
+      command: cmd.name,
       reason: status === 'executed' ? undefined : result.message,
       note: status === 'executed' ? `${result.message} · 테스트 버튼` : '테스트 버튼',
     });
     useGestureStore.getState().setEffect({
       gestureLabel: `${GESTURE_LABEL[gesture]} (테스트)`,
-      label: result.ok ? result.message : `${def.name} · ${result.message}`,
+      label: result.ok ? result.message : `${cmd.name} · ${result.message}`,
       tone: result.ok ? 'ok' : 'noop',
       at: performance.now(),
     });
@@ -62,14 +72,16 @@ export function MappingEditor() {
       <div className="card-head">
         <div>
           <h2 id="mapping-title" className="t-title-3">
-            제스처와 명령 연결
+            {def.name} 모드 매핑
           </h2>
-          <p className="t-caption t-muted">바꾸면 바로 적용되고 이 브라우저에 저장됩니다</p>
+          <p className="t-caption t-muted">바꾸면 바로 적용되고 이 브라우저에 모드별로 저장됩니다</p>
         </div>
-        <button type="button" className="btn btn-ghost btn-sm" onClick={reset}>
+        <button type="button" className="btn btn-ghost btn-sm" onClick={() => reset(mode)}>
           기본값으로 되돌리기
         </button>
       </div>
+
+      {empty && <p className="mapping-empty t-body-2 t-subtle">아직 명령이 없습니다. 아래에서 연결하세요.</p>}
 
       <div className="table-scroll">
         <table className="data-table mapping-table">
@@ -86,14 +98,14 @@ export function MappingEditor() {
           <tbody>
             {GESTURE_ORDER.map((gesture) => {
               const entry = mapping[gesture];
-              const def = COMMANDS[entry.commandId];
+              const cmd = COMMANDS[entry.commandId];
               const Icon = GESTURE_ICON[gesture];
               const locked = gesture === LOCKED_GESTURE;
               const selectId = `${baseId}-${gesture}-cmd`;
               const paramId = `${baseId}-${gesture}-param`;
               const helpId = `${baseId}-${gesture}-help`;
-              const validation = validateParams(def, entry.params);
-              const schema = def.params;
+              const validation = validateParams(cmd, entry.params);
+              const schema = cmd.params;
               // 콜백 안에서는 타입 좁힘이 유지되지 않으므로 키를 미리 꺼낸다
               const paramKey = schema.kind === 'none' ? null : schema.key;
 
@@ -129,7 +141,7 @@ export function MappingEditor() {
                             id={selectId}
                             className="input select"
                             value={entry.commandId}
-                            onChange={(e) => setCommand(gesture, e.target.value as CommandId)}
+                            onChange={(e) => setCommand(mode, gesture, e.target.value as CommandId)}
                             aria-describedby={helpId}
                           >
                             {ASSIGNABLE_COMMANDS.map((c) => (
@@ -140,7 +152,7 @@ export function MappingEditor() {
                           </select>
                         </span>
                         <p id={helpId} className="t-caption t-muted mapping-help">
-                          {def.description}
+                          {cmd.description}
                         </p>
                       </td>
 
@@ -159,7 +171,7 @@ export function MappingEditor() {
                               max={schema.max}
                               step={schema.step}
                               value={entry.params[paramKey] ?? ''}
-                              onChange={(e) => setParams(gesture, { [paramKey]: e.target.value === '' ? '' : Number(e.target.value) })}
+                              onChange={(e) => setParams(mode, gesture, { [paramKey]: e.target.value === '' ? '' : Number(e.target.value) })}
                               aria-invalid={validation.ok ? undefined : true}
                             />
                             <p className="field-error">{validation.ok ? '' : validation.error}</p>
@@ -173,7 +185,7 @@ export function MappingEditor() {
                             <KeyCaptureInput
                               id={paramId}
                               value={String(entry.params[paramKey] ?? '')}
-                              onChange={(combo) => setParams(gesture, { [paramKey]: combo })}
+                              onChange={(combo) => setParams(mode, gesture, { [paramKey]: combo })}
                               onCapturingChange={setCapturing}
                             />
                             <p className="field-error">{validation.ok ? '' : validation.error}</p>

@@ -33,7 +33,12 @@ describe('logStore', () => {
   it('formatLog은 헤더를 붙인다', () => {
     useLogStore.getState().add({ gesture: 'fist', result: 'executed', command: '활성화 OFF', time: 0 });
     const text = formatLog(useLogStore.getState().entries);
-    expect(text.split('\n')[0]).toBe('시각 | 제스처 | 명령 | 결과 | 사유/비고');
+    expect(text.split('\n')[0]).toBe('시각 | 제스처/주체 | 명령 | 결과 | 사유/비고');
     expect(text.split('\n')).toHaveLength(2);
+  });
+
+  it('제스처가 아닌 항목(모드 전환)은 subject 를 주체로 쓴다', () => {
+    const line = formatLogLine({ id: 1, time: new Date(2026, 8, 9, 9, 0, 0, 0).getTime(), subject: '모드 전환', result: 'executed', command: 'media → presentation', note: '음성 "발표 모드"' });
+    expect(line).toBe('09:00:00.000 | 모드 전환 | media → presentation | 실행 | 음성 "발표 모드"');
   });
 });

@@ -1,5 +1,26 @@
 import { describe, expect, it } from 'vitest';
-import { matchesActivationShortcut, type KeyLike } from '../shortcuts';
+import { matchesActivationShortcut, matchesModeShortcut, type KeyLike } from '../shortcuts';
+
+describe('matchesModeShortcut', () => {
+  const k = (code: string, o: Partial<KeyLike> = {}): KeyLike => ({ code, ctrlKey: true, shiftKey: true, altKey: false, metaKey: false, repeat: false, ...o });
+
+  it('Ctrl+Shift+1~4 → 모드, 0 → 대기', () => {
+    expect(matchesModeShortcut(k('Digit1'))).toBe('media');
+    expect(matchesModeShortcut(k('Digit2'))).toBe('reading');
+    expect(matchesModeShortcut(k('Digit3'))).toBe('presentation');
+    expect(matchesModeShortcut(k('Digit4'))).toBe('meeting');
+    expect(matchesModeShortcut(k('Digit0'))).toBe('standby');
+  });
+
+  it('수식키가 다르거나 5 이상, 반복 입력은 null', () => {
+    expect(matchesModeShortcut(k('Digit5'))).toBeNull();
+    expect(matchesModeShortcut(k('Digit1', { ctrlKey: false }))).toBeNull();
+    expect(matchesModeShortcut(k('Digit1', { metaKey: true }))).toBeNull();
+    expect(matchesModeShortcut(k('Digit1', { altKey: true }))).toBeNull();
+    expect(matchesModeShortcut(k('Digit1', { repeat: true }))).toBeNull();
+    expect(matchesModeShortcut(k('KeyM'))).toBeNull();
+  });
+});
 
 const key = (o: Partial<KeyLike>): KeyLike => ({
   code: 'KeyM',
