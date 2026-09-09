@@ -39,10 +39,12 @@ src/
     catalog.ts     명령 7개 (media.*, timer.toggle, key.press, none, system.toggleEnabled)
     registry.ts    파라미터 검증, runCommand, runMapping (executed / failed / ignored)
     keyPress.ts    키 조합 파서/포매터, KeyboardEvent 합성 (isTrusted 한계)
-  mapping/         제스처 → 명령 매핑 데이터 (types, defaults, localStorage storage)
+  mapping/         제스처 → 명령 매핑 데이터 (types, defaults, storage v2 모드별 + v1 마이그레이션)
+  modes/           ModeDef 카탈로그 (media 동작, reading/presentation/meeting 빈 프리셋, standby 시스템 모드)
+  voice/           Web Speech 래퍼: keywords(발화→의도, 순수), recognizer(인식), tts(합성), speech.d.ts
   targets/         명령의 데모 대상: youtube/ (플레이어), timer/ (범용 카운트다운)
-  store/           zustand: gestureStore, mappingStore, targetStore, logStore
-  ui/              CameraView, Hud, MappingEditor, KeyCaptureInput, LastKeyIndicator, EventLog, DevPanel, icons
+  store/           zustand: gestureStore, modeStore(전환·게이트·음성 상태), mappingStore, targetStore, logStore
+  ui/              CameraView, Hud, ModeSwitcher, VoiceIndicator, MappingEditor, KeyCaptureInput, LastKeyIndicator, EventLog, DevPanel, icons
   styles/          tokens.css, base.css, fonts.ts
 docs/
   DESIGN.md        단일 디자인 기준 (+ 적용 노트)
@@ -59,7 +61,8 @@ docs/
 4. **상태 머신 7단계**: 후보 발견 → 유지/궤적 확인 → 신뢰도 확인 → 재실행 방지 → 실행 예정 표시 → 실행+이펙트+효과음 → 쿨다운. `fist`(활성화 토글)는 비활성 상태에서도 항상 처리하며 **엔진이 직접 토글**한다(명령 계층이 아님).
 5. **명령은 카탈로그 → 매핑 → 레지스트리.** 새 명령은 `commands/catalog.ts`에 한 항목만 추가하면 편집기·검증·저장이 따라온다. 명령은 `targetStore`를 통해서만 대상을 만진다.
 6. **로그는 세 종류.** 실행 / 실행 실패(명령이 ok:false) / 무시(상태 머신 사유, 키 캡처 중, 명령 없음). 사유를 화면과 `console.log`에 남긴다.
-7. **확장은 인터페이스로만.** 사용자 정의 제스처, 프리셋, 확장 프로그램, 다른 탭 제어는 만들지 않는다. 프리셋이 필요해지면 `mapping/presets/`.
+7. **모드는 매핑 + 대상 의 묶음, 음성은 전환에만.** 전환 경로(음성·화면·키보드)는 항상 공존하고 음성이 막혀도 앱은 완전히 동작한다. 대기 모드는 주먹으로 풀리지 않는다(`modeStore.gestureGate`, D-016). 전환 쿨다운·궤적 초기화는 `useGestureEngine`에서 처리하고 `gesture/`는 건드리지 않는다.
+8. **확장은 인터페이스로만.** 사용자 정의 제스처(`ModeDef.customGestures` 자리만), 읽기·발표·회의 모드의 실제 대상, 확장 프로그램, 다른 탭 제어는 만들지 않는다.
 
 ## 확정된 결정 (바꾸지 말 것)
 
@@ -67,7 +70,8 @@ docs/
 - 한 손 제스처 5개만. 인식 파라미터는 T-003~T-009 튜닝값 유지.
 - **주먹 = 활성화 on/off 고정.** 매핑 편집 불가, 저장소가 항상 고정값으로 덮어쓴다. `fistHoldMs`는 1.2초 아래로 내리지 않는다(T-009).
 - 실행 전 확인 단계 없음. 활성화 토글: 주먹 유지 + 화면 버튼 + `Ctrl+Shift+M`(macOS도 Cmd가 아닌 Ctrl).
-- 데모 대상은 YouTube 임베드 하나 + 타이머 + 마지막 키 표시.
+- 데모 대상은 YouTube 임베드 하나 + 타이머 + 마지막 키 표시(미디어 모드).
+- 모드 순서 고정: media, reading, presentation, meeting (+ standby). 음성은 모드 전환·대기 해제에만 쓰고 명령 실행에는 쓰지 않는다. 대기 해제는 음성·화면·키보드만.
 
 ## 브랜치 규칙
 
@@ -82,6 +86,8 @@ docs/
 - 새 판정 규칙을 넣으면 `src/gesture/__tests__/fixtures.ts`의 합성 손으로 테스트를 먼저 쓴다. 테스트가 실패하면 코드와 픽스처 둘 다 의심한다(T-002).
 - 좌우 방향 버그는 임계값으로 고치지 않는다. `vision/mirror.ts`가 유일한 반전 지점인지부터 확인한다(D-003).
 - 새 명령을 추가하면 `catalog.ts` 항목 + `registry.test.ts`의 검증 케이스 + `storage.test.ts`의 정규화 케이스를 함께 쓴다. `system.*` 명령은 `assignable: false`.
+- 음성 별칭을 늘릴 때는 `modes/catalog.ts`의 `voiceAliases`(모드) 또는 `voice/keywords.ts`(대기·해제)에 넣고 `keywords.test.ts`의 "별칭 전부" 테스트가 자동으로 검사하게 둔다. "모드"가 붙은 별칭은 포함 매칭, 단독 단어는 완전 일치라는 규칙을 유지한다.
+- 저장 형식을 바꾸면 `version`을 올리고 이전 버전 읽기 경로를 `mapping/storage.ts`에 남긴다(D-016 마이그레이션 패턴).
 - 기술 결정을 내리면 `docs/DECISIONS.md`에 "결정 / 대안 / 선택 이유 / 되돌릴 조건"으로 적고, 막혔다 풀린 것은 "시행착오"에 적는다.
 - `@mediapipe/tasks-vision` API를 새로 쓸 때는 `node_modules/@mediapipe/tasks-vision/vision.d.ts`를 읽고 쓴다. 문서보다 설치된 타입이 기준이다.
 - 다른 브라우저 포트가 5173을 쓰면 `PORT=5174 pnpm dev`. `.claude/launch.json`은 Claude Code 브라우저 미리보기용이다.
