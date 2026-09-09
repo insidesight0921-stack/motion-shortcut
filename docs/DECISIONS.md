@@ -121,6 +121,21 @@
 - **대안**: CSS-in-JS·Tailwind 도입. 외부 UI 라이브러리 금지 결정과 파일 수를 고려해 순수 CSS 변수 유지.
 - **되돌릴 조건**: 디자이너가 별도 토큰을 주면 `tokens.css` 값만 교체. 컴포넌트는 별칭(`--surface-*`)만 참조하므로 다크 매핑 변경도 그 파일 안에서 끝난다.
 
+## D-015 요리 모드 제거, 범용 명령 + 사용자 매핑으로 전환 (2026-09-09, feat/generic-commands)
+
+- **결정**: 제스처 5개는 그대로 두고(인식 파라미터 T-003~T-009 유지), 명령 계층과 UI를 "범용 명령 카탈로그 + 사용자가 편집하는 매핑"으로 바꾼다. 요리 모드 코드는 주석 처리가 아니라 삭제.
+- **이유**: 특정 상황(요리)에 묶인 하드코딩 위에서는 디벨롭 방향을 정하기 어렵다. 어떤 상황에도 붙일 수 있는 기본형(제스처 ↔ 범용 명령)을 먼저 확보하고 그 위에서 방향을 고른다.
+- **삭제 목록**: `src/modes/cooking/*` 7개(CookingMode, RecipeSteps, recipe, commands, mapping, Timer·YouTubePlayer는 이동 후 삭제), `src/store/cookingStore.ts`와 테스트, `src/ui/MappingTable.tsx`(읽기 전용 표), "요리 모드 · 1차 초안" 문구, 레시피 CSS.
+- **새 구조**: `commands/`(types·catalog·registry·keyPress), `mapping/`(types·defaults·storage), `store/mappingStore`·`store/targetStore`(cookingStore를 범용화: 플레이어 핸들에 seekTo/getCurrentTime 추가, 타이머 길이 파라미터화, 마지막 키), `targets/youtube`·`targets/timer`(이동), `ui/MappingEditor`·`KeyCaptureInput`·`LastKeyIndicator`.
+- **명령 카탈로그**: `media.playPause`, `media.seekForward(초)`, `media.seekBackward(초)`, `timer.toggle(분)`, `key.press(키 조합)`, `none`, `system.toggleEnabled`(주먹 전용, 드롭다운 비노출). 기본 매핑: 손바닥→재생/일시정지, 오른쪽→+10초, 왼쪽→−10초, 원→3분 타이머, 주먹→활성화(고정).
+- **결정 1 — 주먹 토글은 엔진이 수행**: `useGestureEngine`이 fist 실행 시 `enabled`를 직접 뒤집는다. 카탈로그의 `system.toggleEnabled.run()`은 상태를 바꾸지 않고 메시지만 돌려준다. 매핑·명령 계층이 깨져도 잠금 해제 경로는 살아 있어야 한다. 저장소는 주먹 항목을 어떤 입력이든 고정값으로 덮어쓴다(테스트로 고정).
+- **결정 2 — 스토어 범위**: `gestureStore`는 변경 없음. `cookingStore` → `targetStore` 범용화, `mappingStore` 신설, `logStore`의 결과 종류를 `executed / failed / ignored`로 정리(보완 2).
+- **보완 1 — 키 캡처 안전장치**: `KeyCaptureInput`은 `isTrusted=false` 이벤트를 무시한다(우리 `key.press`가 캡처 입력에 되먹임되지 않음). 캡처 중에는 `mappingStore.capturing=true`이고 `runMapping(..., { paused })`이 모든 매핑 실행을 `ignored: 키 캡처 중`으로 돌린다. 주먹 토글은 엔진 담당이라 캡처 중에도 동작한다.
+- **보완 3 — 합성 키 대상**: `dispatchKeyCombo` 기본 대상은 `document.activeElement ?? document.body`이되, activeElement가 `[data-mapping-editor]` 안이면 body. 방금 편집한 드롭다운이나 캡처 입력이 자기 자신에게 키를 받는 사고를 막는다. `resolveKeyTarget`으로 분리해 DOM 없이 테스트.
+- **합성 KeyboardEvent의 `isTrusted` 한계와 다음 방향**: 스크립트가 만든 KeyboardEvent는 `isTrusted=false`다. 브라우저는 이 이벤트로 기본 동작(스크롤, 포커스 이동, 폼 제출)을 하지 않고, YouTube iframe 같은 다른 문서로 넘기지도 않는다. 즉 `key.press`는 **우리 페이지 안의 JS 리스너**에만 동작한다. 화면의 "마지막으로 받은 키" 카드가 그 사실을 보여 준다. 이 한계가 다음 단계의 출발점이다: 다른 웹앱을 제어하려면 (a) 대상 앱이 우리 SDK(`postMessage` 또는 스크립트)를 넣어 명령을 받거나, (b) 브라우저 확장 프로그램이 `chrome.debugger`/`Input.dispatchKeyEvent`로 신뢰된 입력을 만들어야 한다. 둘 다 이번 범위 밖이며 `Mode`/프리셋과 함께 만들지 않는다.
+- **대안**: (a) 요리 모드를 남기고 "모드 전환"을 추가 — 기본형이 없는 채 모드만 늘어난다. (b) 매핑을 코드 상수로만 두기 — 사용자가 바꿔 보며 디벨롭 방향을 찾는 목적에 맞지 않는다.
+- **되돌릴 조건**: 프리셋이 필요해지면 `mapping/presets/`를 추가한다(저장 형식에 `version`을 둔 이유). 사용자 정의 제스처·확장 프로그램·다른 탭 제어는 별도 결정.
+
 ## 시행착오
 
 ### T-001 pnpm 11에서 `pnpm test`가 esbuild 빌드 스크립트 때문에 실패 (1단계)
