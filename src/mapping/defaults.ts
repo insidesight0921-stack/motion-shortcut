@@ -9,6 +9,22 @@ export const DEFAULT_MAPPING: Mapping = {
   fist: LOCKED_ENTRY,
 };
 
+/** 빈 프리셋: 주먹만 고정, 나머지는 none */
+export function emptyMapping(): Mapping {
+  return {
+    open_palm: { commandId: 'none', params: {} },
+    swipe_right: { commandId: 'none', params: {} },
+    swipe_left: { commandId: 'none', params: {} },
+    circle: { commandId: 'none', params: {} },
+    fist: { ...LOCKED_ENTRY, params: {} },
+  };
+}
+
+/** 매핑에 none 이 아닌 명령이 하나라도 있는가 (빈 프리셋 판단) */
+export function hasAnyCommand(m: Mapping): boolean {
+  return (Object.keys(m) as (keyof Mapping)[]).some((g) => g !== 'fist' && m[g].commandId !== 'none');
+}
+
 export function cloneMapping(m: Mapping): Mapping {
   const out = {} as Mapping;
   for (const k of Object.keys(m) as (keyof Mapping)[]) {

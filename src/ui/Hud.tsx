@@ -1,5 +1,6 @@
 import type { GestureId } from '../gesture/types';
 import { useGestureStore } from '../store/gestureStore';
+import { useModeStore } from '../store/modeStore';
 import { StatusDot } from './icons';
 
 export const GESTURE_LABEL: Record<GestureId, string> = {
@@ -28,6 +29,7 @@ export function Hud() {
   const hud = useGestureStore((s) => s.hud);
   const enabled = useGestureStore((s) => s.enabled);
   const cooldownMs = useGestureStore((s) => s.config.cooldownMs);
+  const inStandby = useModeStore((s) => s.current === 'standby');
 
   const ringProgress = hud.phase === 'holding' || hud.phase === 'armed' ? hud.progress : 0;
   const cooldownFrac = hud.phase === 'cooldown' && hud.cooldownRemainingMs > 0 ? Math.min(1, hud.cooldownRemainingMs / cooldownMs) : 0;
@@ -46,10 +48,17 @@ export function Hud() {
         <h2 id="hud-title" className="t-title-3">
           인식 상태
         </h2>
-        <span className={`hud-badge t-caption ${enabled ? 'is-on' : 'is-off'}`}>
-          <StatusDot />
-          모션 단축키 {enabled ? 'ON' : 'OFF'}
-        </span>
+        {inStandby ? (
+          <span className="hud-badge t-caption is-off">
+            <StatusDot />
+            대기 중 — 음성·키보드·화면으로 해제
+          </span>
+        ) : (
+          <span className={`hud-badge t-caption ${enabled ? 'is-on' : 'is-off'}`}>
+            <StatusDot />
+            모션 단축키 {enabled ? 'ON' : 'OFF'}
+          </span>
+        )}
       </div>
 
       <div className="hud-main">

@@ -45,7 +45,7 @@ export function EventLog() {
             <thead>
               <tr>
                 <th>시각</th>
-                <th>제스처</th>
+                <th>제스처 / 주체</th>
                 <th>명령</th>
                 <th>결과</th>
                 <th>사유 / 비고</th>
@@ -57,7 +57,7 @@ export function EventLog() {
                   <td data-label="시각" className="mono">
                     {formatTime(e.time)}
                   </td>
-                  <td data-label="제스처">{GESTURE_LABEL[e.gesture]}</td>
+                  <td data-label="제스처">{e.gesture ? GESTURE_LABEL[e.gesture] : (e.subject ?? '–')}</td>
                   <td data-label="명령">{e.command ?? '–'}</td>
                   <td data-label="결과" className={e.result === 'failed' ? 't-danger' : ''}>
                     {RESULT_KO[e.result]}
