@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { formatLog, formatTime, useLogStore } from '../store/logStore';
+import { formatLog, formatTime, RESULT_KO, useLogStore } from '../store/logStore';
 import { GESTURE_LABEL } from './Hud';
 
-const RESULT_LABEL = { executed: '실행', noop: '변화 없음', ignored: '무시' } as const;
-
-/** 실행 로그 카드. 무시된 후보도 사유와 함께. "복사"로 전체를 텍스트로 가져갈 수 있다. */
+/** 실행 로그 카드. 실행 / 실행 실패 / 무시를 구분하고 무시·실패 사유를 함께 남긴다. "복사"로 전체를 텍스트로 가져갈 수 있다. */
 export function EventLog() {
   const entries = useLogStore((s) => s.entries);
   const clear = useLogStore((s) => s.clear);
@@ -61,7 +59,9 @@ export function EventLog() {
                   </td>
                   <td data-label="제스처">{GESTURE_LABEL[e.gesture]}</td>
                   <td data-label="명령">{e.command ?? '–'}</td>
-                  <td data-label="결과">{RESULT_LABEL[e.result]}</td>
+                  <td data-label="결과" className={e.result === 'failed' ? 't-danger' : ''}>
+                    {RESULT_KO[e.result]}
+                  </td>
                   <td data-label="사유">{[e.reason, e.note].filter(Boolean).join(' · ')}</td>
                 </tr>
               ))}

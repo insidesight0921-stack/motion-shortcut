@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react';
-import { useCookingStore, type PlayerPlaybackState } from '../../store/cookingStore';
+import { useTargetStore, type PlayerPlaybackState } from '../../store/targetStore';
 import { useYouTubeApi } from './useYouTubeApi';
 import { parseYouTubeId } from './youtubeId';
 
@@ -30,16 +30,17 @@ const STATE_LABEL: Record<PlayerPlaybackState, string> = {
 };
 
 /**
- * 조리 영상 카드 (YouTube IFrame Player). 명령은 스토어의 playerApi를 통해서만 플레이어를 만진다.
+ * 미디어 명령(media.*)의 데모 대상. YouTube IFrame Player.
+ * 명령은 스토어의 playerApi(play/pause/seekTo/getCurrentTime)를 통해서만 플레이어를 만진다.
  * 브라우저 자동재생 정책: 제스처로 부르는 playVideo()는 사용자 입력이 아니므로
  * 페이지에서 아직 아무 클릭도 하지 않았다면 막힐 수 있다. 카메라 시작 버튼 클릭이 보통 그 조건을 채운다.
  */
 export function YouTubePlayer() {
   const yt = useYouTubeApi();
-  const videoId = useCookingStore((s) => s.videoId);
-  const playerReady = useCookingStore((s) => s.playerReady);
-  const playerState = useCookingStore((s) => s.playerState);
-  const setVideoId = useCookingStore((s) => s.setVideoId);
+  const videoId = useTargetStore((s) => s.videoId);
+  const playerReady = useTargetStore((s) => s.playerReady);
+  const playerState = useTargetStore((s) => s.playerState);
+  const setVideoId = useTargetStore((s) => s.setVideoId);
   const hostRef = useRef<HTMLDivElement>(null);
   const [input, setInput] = useState(videoId);
   const [inputError, setInputError] = useState<string | null>(null);
@@ -47,7 +48,7 @@ export function YouTubePlayer() {
 
   useEffect(() => {
     if (!yt || !hostRef.current) return;
-    const store = useCookingStore.getState();
+    const store = useTargetStore.getState();
     // YT.Player는 대상 요소를 iframe으로 교체하므로 자식 div를 만들어 넘긴다
     const mount = document.createElement('div');
     hostRef.current.appendChild(mount);
@@ -67,6 +68,9 @@ export function YouTubePlayer() {
             play: () => player.playVideo(),
             pause: () => player.pauseVideo(),
             getState: () => toPlaybackState(yt, player.getPlayerState()),
+            getCurrentTime: () => player.getCurrentTime(),
+            getDuration: () => player.getDuration(),
+            seekTo: (seconds) => player.seekTo(seconds, true),
           });
           store.setPlayerReady(true);
         },
@@ -99,7 +103,7 @@ export function YouTubePlayer() {
     <section className="card" aria-labelledby="yt-title">
       <div className="card-head">
         <h2 id="yt-title" className="t-title-3">
-          조리 영상
+          미디어 · YouTube
         </h2>
         <span className="t-caption t-muted">{playerReady ? STATE_LABEL[playerState] : yt ? '플레이어 준비 중' : '플레이어 불러오는 중'}</span>
       </div>

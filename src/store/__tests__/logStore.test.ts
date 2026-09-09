@@ -26,8 +26,8 @@ describe('logStore', () => {
   });
 
   it('한 줄 형식은 시각 | 제스처 | 명령 | 결과 | 사유', () => {
-    const line = formatLogLine({ id: 1, time: new Date(2026, 8, 7, 14, 5, 9, 42).getTime(), gesture: 'swipe_right', result: 'noop', command: '다음 조리 단계', reason: '이미 마지막 단계' });
-    expect(line).toBe('14:05:09.042 | 오른쪽 스와이프(swipe_right) | 다음 조리 단계 | 실행(변화 없음) | 이미 마지막 단계');
+    const line = formatLogLine({ id: 1, time: new Date(2026, 8, 7, 14, 5, 9, 42).getTime(), gesture: 'swipe_right', result: 'failed', command: '앞으로 이동', reason: '플레이어 준비 안 됨' });
+    expect(line).toBe('14:05:09.042 | 오른쪽 스와이프(swipe_right) | 앞으로 이동 | 실행 실패 | 플레이어 준비 안 됨');
   });
 
   it('formatLog은 헤더를 붙인다', () => {

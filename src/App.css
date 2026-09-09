@@ -86,7 +86,7 @@
   min-width: 0;
 }
 
-/* lg 이상: 카메라 | 요리 모드 2컬럼, 하단 표는 전체 폭 */
+/* lg 이상: 카메라 | 매핑·데모 대상 2컬럼, 로그는 전체 폭 */
 @media (min-width: 1024px) {
   .layout {
     grid-template-columns: 1fr 1fr;
@@ -470,13 +470,13 @@ kbd {
   }
 }
 
-/* 로그 결과: 실행 = text-default, 변화 없음 = text-subtle, 무시 = text-muted (상태색은 오류에만) */
+/* 로그 결과: 실행 = text-default, 실행 실패 = text-default(결과 칸만 text-danger), 무시 = text-muted */
 .log-row-executed {
   color: var(--text-default);
 }
 
-.log-row-noop {
-  color: var(--text-subtle);
+.log-row-failed {
+  color: var(--text-default);
 }
 
 .log-row-ignored {
@@ -497,79 +497,6 @@ kbd {
   padding: var(--space-24) 0;
   text-align: center;
   color: var(--text-subtle);
-}
-
-/* ---------- 레시피 카드 ---------- */
-.recipe-current {
-  padding: var(--space-16) var(--space-20);
-  border-radius: var(--radius-12);
-  background: var(--bg-brand-weak);
-  animation: step-in var(--duration-base) var(--ease-out) both;
-}
-
-.recipe-current-label {
-  color: var(--text-subtle);
-}
-
-.recipe-current-title {
-  margin: var(--space-4) 0 var(--space-8);
-}
-
-.recipe-nav {
-  display: flex;
-  gap: var(--space-8);
-  margin-top: var(--space-16);
-}
-
-.recipe-nav .btn {
-  flex: 1;
-}
-
-.recipe-hint {
-  margin-top: var(--space-8);
-  color: var(--text-muted);
-}
-
-.recipe-list {
-  list-style: none;
-  padding: 0;
-  margin-top: var(--space-16);
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-  gap: var(--space-4);
-}
-
-.recipe-list .btn {
-  width: 100%;
-  justify-content: flex-start;
-  text-align: left;
-  white-space: normal;
-  height: auto;
-  min-height: var(--control-md);
-  padding: var(--space-8) var(--space-12);
-  font-weight: 400;
-  color: var(--text-muted);
-}
-
-.recipe-list .is-done .btn {
-  color: var(--text-subtle);
-}
-
-.recipe-list .is-current .btn {
-  background: var(--bg-brand-weak);
-  color: var(--text-brand);
-  font-weight: 600;
-}
-
-@keyframes step-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 /* ---------- YouTube 카드 ---------- */
@@ -756,10 +683,6 @@ kbd {
     animation: fx-leave var(--duration-fast) var(--ease-in) both;
   }
 
-  .recipe-current {
-    animation: fx-leave var(--duration-base) var(--ease-standard) reverse both;
-  }
-
   .timer-fill,
   .hud-ring-progress {
     transition: none;
@@ -767,5 +690,154 @@ kbd {
 
   .btn:active {
     transform: none;
+  }
+}
+
+/* ---------- 매핑 편집기 ---------- */
+.mapping-table td {
+  vertical-align: top;
+}
+
+.mapping-gesture {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--control-md);
+}
+
+.mapping-gesture-icon {
+  display: inline-flex;
+  color: var(--brand-accent);
+}
+
+.mapping-gesture-icon .icon {
+  width: 24px;
+  height: 24px;
+}
+
+.mapping-locked {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--control-md);
+}
+
+.mapping-locked .icon {
+  width: 24px;
+  height: 24px;
+  color: var(--icon-subtle);
+}
+
+.mapping-help {
+  margin-top: var(--space-4);
+  max-width: 32em;
+}
+
+.mapping-param {
+  min-width: 160px;
+}
+
+.mapping-table .btn {
+  margin-top: var(--space-4);
+}
+
+/* select: input과 같은 규격. 화살표는 그라데이션 대신 테두리로 그린 셰브론 */
+.select-wrap {
+  position: relative;
+  display: block;
+}
+
+.select-wrap::after {
+  content: '';
+  position: absolute;
+  right: var(--space-20);
+  top: 50%;
+  width: var(--space-8);
+  height: var(--space-8);
+  border-right: 2px solid var(--icon-subtle);
+  border-bottom: 2px solid var(--icon-subtle);
+  transform: translateY(-70%) rotate(45deg);
+  pointer-events: none;
+}
+
+.select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  min-width: 160px;
+  padding-right: var(--space-40);
+  cursor: pointer;
+}
+
+/* 키 캡처 입력 (버튼이지만 input 규격) */
+.key-capture {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-8);
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}
+
+.key-capture.is-capturing {
+  background: var(--surface-card);
+  border-color: var(--brand-accent);
+  box-shadow: var(--focus-ring);
+}
+
+.key-capture-value {
+  font-size: var(--type-body-2-size);
+  line-height: var(--type-body-2-lh);
+  color: var(--text-default);
+}
+
+/* ---------- 마지막으로 받은 키 ---------- */
+.last-key {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.last-key-combo {
+  align-self: flex-start;
+  color: var(--text-default);
+  padding: var(--space-4) var(--space-12);
+}
+
+.last-key-help {
+  margin-top: var(--space-16);
+}
+
+/* ---------- 타이머 보조 ---------- */
+.timer-minutes {
+  width: var(--space-120);
+}
+
+.timer-actions {
+  align-items: flex-end;
+}
+
+.timer-hint {
+  margin-top: var(--space-12);
+}
+
+/* 제스처 열은 줄바꿈 없이, 설정 열은 남는 폭을 쓴다 */
+.mapping-table th:first-child,
+.mapping-table td:first-child {
+  white-space: nowrap;
+  width: 1%;
+}
+
+.mapping-table td:last-child {
+  width: 1%;
+  white-space: nowrap;
+}
+
+@media (max-width: 639px) {
+  .mapping-table td:first-child,
+  .mapping-table td:last-child {
+    width: auto;
+    white-space: normal;
   }
 }

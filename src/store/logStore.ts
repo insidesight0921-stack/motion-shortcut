@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import type { GestureId } from '../gesture/types';
 
-export type LogResult = 'executed' | 'noop' | 'ignored';
+/** 실행 / 실행 실패 / 무시 (보완 2) */
+export type LogResult = 'executed' | 'failed' | 'ignored';
 
 export interface LogEntry {
   id: number;
@@ -9,11 +10,11 @@ export interface LogEntry {
   time: number;
   gesture: GestureId;
   result: LogResult;
-  /** 실행한 명령 라벨 (executed/noop) */
+  /** 실행한(하려던) 명령 이름 */
   command?: string;
-  /** 무시 사유 또는 noop 사유 */
+  /** 무시 사유 또는 실패 사유 */
   reason?: string;
-  /** 부가 정보 (진행률, 점수 등) */
+  /** 부가 정보 (진행률, 점수, 실행 결과 메시지 등) */
   note?: string;
 }
 
@@ -27,9 +28,9 @@ const GESTURE_KO: Record<GestureId, string> = {
   circle: '원',
 };
 
-const RESULT_KO: Record<LogResult, string> = {
+export const RESULT_KO: Record<LogResult, string> = {
   executed: '실행',
-  noop: '실행(변화 없음)',
+  failed: '실행 실패',
   ignored: '무시',
 };
 

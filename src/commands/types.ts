@@ -1,32 +1,64 @@
-import type { GestureId } from '../gesture/types';
-
 /**
- * 명령 계층. 제스처 인식과 화면 기능을 잇는 얇은 인터페이스.
- * 다른 모드(운동, 발표 등)는 만들지 않지만 Mode 인터페이스가 확장 지점이다.
+ * 명령 계층 타입. 제스처 인식(gesture/)과 화면 기능을 잇는 얇은 인터페이스.
+ * 명령은 특정 상황(요리 등)에 묶이지 않는 범용 동작이며, 사용자가 매핑 편집기에서 제스처에 연결한다.
  */
-export type CommandId = 'video.toggle' | 'recipe.next' | 'recipe.prev' | 'timer.toggle';
+export type CommandId =
+  | 'media.playPause'
+  | 'media.seekForward'
+  | 'media.seekBackward'
+  | 'timer.toggle'
+  | 'key.press'
+  | 'none'
+  | 'system.toggleEnabled';
+
+export const ALL_COMMAND_IDS: CommandId[] = [
+  'media.playPause',
+  'media.seekForward',
+  'media.seekBackward',
+  'timer.toggle',
+  'key.press',
+  'none',
+  'system.toggleEnabled',
+];
+
+/** 명령이 받는 파라미터의 형태. 매핑 편집기가 이 스키마로 입력 UI를 그린다. */
+export type ParamSchema =
+  | { kind: 'none' }
+  | {
+      kind: 'number';
+      key: 'seconds' | 'minutes';
+      label: string;
+      unit: string;
+      min: number;
+      max: number;
+      step: number;
+      default: number;
+    }
+  | { kind: 'keyCombo'; key: 'combo'; label: string; default: string };
+
+export type CommandParams = Record<string, number | string>;
 
 export interface CommandContext {
-  /** Date.now() 기준 ms. 타이머 등 벽시계가 필요한 명령용 */
+  /** Date.now() 기준 ms */
   now: number;
+  /** system.toggleEnabled 용. 실제 토글은 엔진이 하므로 명령은 보통 호출하지 않는다 (D-015) */
+  toggleEnabled: () => void;
 }
 
 export interface CommandResult {
-  /** false면 명령은 호출됐지만 할 일이 없었다(예: 이미 마지막 단계). 로그에 사유를 남긴다 */
+  /** false = 실행 실패 (예: 플레이어 미준비). 로그에 "실행 실패 · 사유"로 남는다 */
   ok: boolean;
   message: string;
 }
 
-export interface Command {
+export interface CommandDef {
   id: CommandId;
-  label: string;
-  run(ctx: CommandContext): CommandResult;
-}
-
-export interface Mode {
-  id: string;
+  /** 드롭다운 표시명 */
   name: string;
-  /** 제스처 → 명령. 매핑되지 않은 제스처(fist)는 모드 밖에서 처리된다 */
-  mapping: Partial<Record<GestureId, CommandId>>;
-  commands: Record<CommandId, Command>;
+  /** 도움말. 한계가 있으면 여기 적는다 (key.press의 isTrusted) */
+  description: string;
+  params: ParamSchema;
+  /** false면 매핑 편집기 드롭다운에 노출하지 않는다 (system.toggleEnabled) */
+  assignable: boolean;
+  run(params: CommandParams, ctx: CommandContext): CommandResult;
 }

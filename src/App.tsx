@@ -1,10 +1,11 @@
 import { useEffect, useMemo } from 'react';
-import { runGesture } from './commands/registry';
+import { runMapping } from './commands/registry';
 import { IGNORE_REASON_LABEL } from './gesture/stateMachine';
-import { CookingMode } from './modes/cooking/CookingMode';
-import { cookingMode } from './modes/cooking/mapping';
 import { useGestureStore } from './store/gestureStore';
 import { useLogStore } from './store/logStore';
+import { useMappingStore } from './store/mappingStore';
+import { Timer } from './targets/timer/Timer';
+import { YouTubePlayer } from './targets/youtube/YouTubePlayer';
 import { ActivationToggle } from './ui/ActivationToggle';
 import { CameraView } from './ui/CameraView';
 import { DevPanel } from './ui/DevPanel';
@@ -12,7 +13,8 @@ import { Effects } from './ui/Effects';
 import { EventLog } from './ui/EventLog';
 import { GESTURE_LABEL, Hud } from './ui/Hud';
 import { IconSoundOff, IconSoundOn } from './ui/icons';
-import { MappingTable } from './ui/MappingTable';
+import { LastKeyIndicator } from './ui/LastKeyIndicator';
+import { MappingEditor } from './ui/MappingEditor';
 import { useActivationShortcut } from './ui/shortcuts';
 import { playSound, setMuted, unlockAudio } from './ui/sound';
 import { useGestureEngine } from './ui/useGestureEngine';
@@ -77,26 +79,35 @@ export default function App() {
     onExecute: (gesture) => {
       blurIframeFocus();
       const log = useLogStore.getState();
-      const { setEffect, enabled } = useGestureStore.getState();
+      const { setEffect, enabled, toggleEnabled } = useGestureStore.getState();
       const gestureLabel = GESTURE_LABEL[gesture];
 
       if (gesture === 'fist') {
-        // 엔진이 이미 enabled를 뒤집은 뒤 호출된다
+        // 엔진이 이미 enabled를 뒤집은 뒤 호출된다 (D-015 결정 1)
         const label = `모션 단축키 ${enabled ? 'ON' : 'OFF'}`;
-        log.add({ gesture, result: 'executed', command: label });
+        log.add({ gesture, result: 'executed', command: '활성화 on/off', note: label });
         setEffect({ gestureLabel, label, tone: enabled ? 'on' : 'off', at: performance.now() });
         return;
       }
 
-      const exec = runGesture(cookingMode, gesture, { now: Date.now() });
-      if (!exec) {
-        log.add({ gesture, result: 'ignored', reason: '매핑된 명령 없음' });
-        return;
-      }
-      const { command, result } = exec;
-      log.add({ gesture, result: result.ok ? 'executed' : 'noop', command: command.label, reason: result.ok ? undefined : result.message, note: result.ok ? result.message : undefined });
-      setEffect({ gestureLabel, label: result.ok ? result.message : `${command.label} (${result.message})`, tone: result.ok ? 'ok' : 'noop', at: performance.now() });
-      if (result.ok) playSound('execute');
+      const { mapping, capturing } = useMappingStore.getState();
+      const exec = runMapping(mapping, gesture, { now: Date.now(), toggleEnabled }, { paused: capturing, pausedReason: '키 캡처 중' });
+      const commandName = exec.def?.name;
+
+      log.add({
+        gesture,
+        result: exec.status,
+        command: commandName,
+        reason: exec.status === 'executed' ? undefined : exec.message,
+        note: exec.status === 'executed' ? exec.message : undefined,
+      });
+      setEffect({
+        gestureLabel,
+        label: exec.status === 'executed' ? exec.message : `${commandName ?? '명령'} · ${exec.status === 'failed' ? '실행 실패 · ' : ''}${exec.message}`,
+        tone: exec.status === 'executed' ? 'ok' : 'noop',
+        at: performance.now(),
+      });
+      if (exec.status === 'executed') playSound('execute');
     },
   });
 
@@ -106,7 +117,6 @@ export default function App() {
         <div className="container topbar-inner">
           <div className="topbar-title">
             <h1 className="t-title-2">모션 단축키</h1>
-            <p className="t-caption t-muted">{cookingMode.name} · 1차 초안</p>
           </div>
           <div className="topbar-actions">
             <ActivationToggle />
@@ -130,10 +140,10 @@ export default function App() {
           <Hud />
         </div>
         <div className="col">
-          <CookingMode onTimerDone={() => playSound('timerDone')} />
-        </div>
-        <div className="row-full">
-          <MappingTable mode={cookingMode} />
+          <MappingEditor />
+          <YouTubePlayer />
+          <Timer onDone={() => playSound('timerDone')} />
+          <LastKeyIndicator />
         </div>
         <div className="row-full">
           <EventLog />
