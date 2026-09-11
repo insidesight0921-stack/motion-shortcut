@@ -149,6 +149,19 @@
 - **대안**: (a) 모드 없이 매핑 프리셋만 — "대상"과 "사용자 정의 제스처"를 묶을 자리가 없다. (b) 음성으로 명령까지 — 위 이유로 제외. (c) 대기 해제에 주먹 허용 — 대기의 의미가 사라진다.
 - **되돌릴 조건**: 읽기·발표·회의 모드의 실제 대상은 다음 단계에서 `targets/`에 추가하고 `ModeDef.targets`만 채운다. 사용자 정의 제스처는 `ModeDef.customGestures` 자리에 붙인다. 별칭 사전은 실기 로그의 "의도 없음" 문장을 보고 늘린다.
 
+## D-017 Flickey 전환: 발표자용 모션 프레젠테이션 인터페이스로 (2026-09-11, feat/flickey-1-core)
+
+- **결정**: 제품을 Flickey(`docs/PRODUCT.md`)로 확정하고 기획서 §25 순서(1차 발표 제어 기반 → 2차 모드 → 3차 자료 → 4차 리허설 → 5차 개인화)로 단계 전환한다. 한 손 인식 엔진(`gesture/`, 테스트 102개)은 손대지 않고 양손은 `gesture/twoHands.ts`·`modeGesture.ts`를 **추가**한다. 음성(`voice/`)은 코드 보존·기본 OFF·설정 하단 실험 기능. YouTube·타이머·읽기 대상은 삭제.
+- **아키텍처 경계**: 웹앱(이 레포: 카메라·인식·프로필·리허설·대기 화면·로그) + 로컬 에이전트(팀원, 별도 코드: OS 키·커서·레이저 창·자료 실행·미니 패널). 사이는 `ws://127.0.0.1:41777` JSON. 이 레포는 **프로토콜 명세(`docs/AGENT-PROTOCOL.md`)와 모의 에이전트**까지만 만든다. 에이전트가 없으면 페이지 안 폴백(합성 키·페이지 안 레이저)으로 단독 데모.
+- **프로토콜에 삭제·이동·종료 메시지를 두지 않는 이유**: §16 높은 위험 명령은 실수 한 번이 발표를 끝낸다. 메시지 자체가 없으면 웹앱 버그로도 실행될 수 없다. MVP의 높은 위험 명령은 `slide.return`(Esc) 하나이고 이것도 `key` 메시지다. `open`은 웹앱·에이전트 **이중 화이트리스트**.
+- **모션 OFF와 standby를 하나로 합친 이유**: 0단계 초안은 "모션 OFF(발표 세션 전역 스위치) > standby(모드) > 활성화 off > 실행"의 4단이었다. 그런데 standby의 정의(모든 제스처 무시, 한 손으로 해제 불가, D-016)가 기획서 §19 "모션 기본값 OFF + 복잡한 모션으로 ON/OFF"와 같고, §12 표시도 `MOTION OFF` 하나뿐이다. 개념이 둘이면 사용자에게 "모션은 켜졌는데 대기 모드"라는 설명 불가능한 상태가 생긴다. 그래서 **standby = MOTION OFF** 로 합친다. 양손 X 유지 = standby 토글, 발표 세션 시작 시 기본 standby, UI 표시명 `MOTION OFF`. 우선순위 체인은 `standby > 활성화 off(settings.motionToggle === 'fist'일 때만 존재) > 실행`으로 2~3단. 기존 `modeStore.gestureGate`·`WAKE_SOURCES`는 그대로 쓰고 `SwitchSource`에 `'gesture'`(양손 전환)를 추가한다. 양손 검지 교차 전환으로는 standby 해제를 허용하고 한 손 제스처로는 불가(§13 "지정한 복합 포즈 유지").
+- **디자인 두 체계**: 발표 전 화면은 `docs/DESIGN.md`, 발표 중 오버레이는 `docs/DESIGN-OVERLAY.md`(검정·건메탈·백청색 발광·암적색·1초 소멸). DESIGN.md의 글로우 금지는 오버레이 범위에서 명시적 예외이며 사유는 그 문서 §2에 있다. 코드 경계는 `src/ui/overlay/` + `--ov-*` 토큰 + `ov-` 접두사.
+- **프로필 모델과 저장 v3**: `Profile { id, name, program, mappingByMode(slide/cursor/laser/asset), assets[], rehearsal?(통계만), gestureOverrides?, settings }`, 키 `motion-shortcut.profiles.v3`. v2 `byMode` → v3: `presentation` → `slide`, `media`의 `key.press` 항목만 `slide`에 병합(겹치면 presentation 우선), 사라진 명령(`media.*`, `timer.toggle`)은 `none`, 나머지 모드는 기본값. v2·v1은 지우지 않는다.
+- **모드 전환 방향**: 검지 교차 유지 → ↓ 슬라이드, ← 커서, → 레이저, ↑ 자료(기획서 §12에 자료 방향이 없어 제안값). `selectMinDistance`는 방향별 config(`selectMinDistanceByDirection`, 기본 동일값)로 분리해 실기 후 조정.
+- **handedness**: MediaPipe는 입력이 거울 이미지라고 가정하고 Left/Right를 매긴다. 우리는 원본 프레임을 넣으므로 라벨이 사용자 기준과 반대일 가능성이 크다. `vision/handedness.ts` 한 곳에서만 뒤집고(D-003 원칙) 1차 실기 항목 1번으로 확인한다.
+- **대안**: (a) 기존 모드 4개 위에 발표 모드만 추가 — 제품 정체성과 어긋나고 삭제 대상 코드가 남는다. (b) 에이전트 코드를 이 레포에 함께 — 팀 분담과 네이티브 빌드 파이프라인이 섞인다. (c) 양손을 기존 파이프라인 안에 넣기 — 102개 테스트와 튜닝값을 흔든다.
+- **되돌릴 조건**: 에이전트가 기한 안에 나오지 않으면 페이지 안 폴백만으로 데모한다(그래서 폴백을 1차에 넣는다). 검지 교차 전환이 실기에서 5회 중 5회가 안 되면 §13의 대안(양손 벌리기)으로 진입 동작을 바꾼다.
+
 ## 시행착오
 
 ### T-001 pnpm 11에서 `pnpm test`가 esbuild 빌드 스크립트 때문에 실패 (1단계)

@@ -1,6 +1,10 @@
-# 모션 단축키 (motion-shortcut)
+# 모션 단축키 (motion-shortcut) → Flickey
 
-팀 "곰팡이" · 원티드 해커톤. 웹캠으로 한 손 제스처 5개를 인식해, 사용자가 연결해 둔 범용 명령(미디어 재생/이동, 타이머, 키 입력)을 브라우저 안에서 실행하는 개인용 모션 인터페이스. 특정 상황에 묶이지 않는 기본형이다(D-015).
+팀 "곰팡이" · 원티드 해커톤. 제품은 **Flickey — 발표자용 개인 맞춤형 모션 프레젠테이션 인터페이스**로 확정됐다(`docs/PRODUCT.md`, D-017). 현재 코드는 범용 명령+모드 시스템 상태이며 기획서 §25 순서로 단계 전환 중이다. 아래 구조 설명은 전환이 진행되면서 갱신한다.
+
+- 두 프로세스: 웹앱(이 레포) + 로컬 에이전트(팀원, 별도 코드). 계약은 `docs/AGENT-PROTOCOL.md`. 이 레포는 명세와 모의 에이전트(`tools/mock-agent/`)까지만.
+- 디자인 두 체계: 발표 전 화면 `docs/DESIGN.md`, 발표 중 오버레이 `docs/DESIGN-OVERLAY.md`(`src/ui/overlay/`, `--ov-*` 토큰만).
+- `standby` = `MOTION OFF`(같은 상태). 우선순위 `standby > 활성화 off(주먹 옵션일 때만) > 실행`.
 
 ## 스택
 
@@ -47,7 +51,10 @@ src/
   ui/              CameraView, Hud, ModeSwitcher, VoiceIndicator, MappingEditor, KeyCaptureInput, LastKeyIndicator, EventLog, DevPanel, icons
   styles/          tokens.css, base.css, fonts.ts
 docs/
-  DESIGN.md        단일 디자인 기준 (+ 적용 노트)
+  PRODUCT.md       제품 기획서 (Flickey §1~§28). 전환은 D-017, 단계는 §25 순서
+  AGENT-PROTOCOL.md 웹앱 ↔ 로컬 에이전트 WebSocket 계약 v1 (팀원에게 그대로 전달)
+  DESIGN.md        발표 전 화면(홈·프로필·리허설·설정·대기·로그)의 디자인 기준 (+ 적용 노트)
+  DESIGN-OVERLAY.md 발표 중 오버레이(손 피드백·모드 발광·레이저·미니 패널) 기준. 글로우 허용의 명시적 예외
   DECISIONS.md     기술 결정 기록 (결정 / 대안 / 선택 이유 / 되돌릴 조건). 시행착오도 남긴다
   GESTURES.md      기본 매핑, 제스처별 판정 규칙·임계값·오작동 사례·튜닝 방법
   LEARNING.md      개념 정리 (비전공자용)
