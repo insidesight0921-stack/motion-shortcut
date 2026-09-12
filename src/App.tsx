@@ -9,6 +9,7 @@ import { useModeStore } from './store/modeStore';
 import { useProfileStore } from './store/profileStore';
 import { useUiStore } from './store/uiStore';
 import { ActivationToggle } from './ui/ActivationToggle';
+import { AgentPanel } from './ui/AgentPanel';
 import { CameraView } from './ui/CameraView';
 import { DevPanel } from './ui/DevPanel';
 import { Effects } from './ui/Effects';
@@ -18,6 +19,7 @@ import { IconSoundOff, IconSoundOn } from './ui/icons';
 import { MappingEditor } from './ui/MappingEditor';
 import { ModeSwitcher } from './ui/ModeSwitcher';
 import { useActivationShortcut, useModeShortcuts } from './ui/shortcuts';
+import { useAgent } from './ui/useAgent';
 import { playSound, setMuted, unlockAudio } from './ui/sound';
 import { useGestureEngine } from './ui/useGestureEngine';
 import { useVoice } from './ui/useVoice';
@@ -28,24 +30,6 @@ import { VisionSession } from './vision/session';
 function blurIframeFocus() {
   const el = document.activeElement;
   if (el instanceof HTMLIFrameElement) el.blur();
-}
-
-/** 발표 대상은 로컬 에이전트가 담당한다 (1-4 에서 연결). 그때까지 자리 표시 */
-function TargetPlaceholder() {
-  const current = useModeStore((s) => s.current);
-  const def = MODES[current];
-  return (
-    <section className="card" aria-labelledby="targets-title">
-      <div className="card-head">
-        <h2 id="targets-title" className="t-title-3">
-          {def.labelEn}
-        </h2>
-        <span className="t-caption t-muted">{def.name}</span>
-      </div>
-      <p className="t-body-2 t-subtle reading">{def.description}</p>
-      <p className="t-caption t-muted reading">실제 슬라이드·커서·레이저 제어는 로컬 에이전트가 수행합니다. 에이전트 연결은 다음 커밋에서 붙습니다.</p>
-    </section>
-  );
 }
 
 function MappingPanel() {
@@ -73,6 +57,7 @@ export default function App() {
   useActivationShortcut();
   useModeShortcuts();
   const voice = useVoice();
+  const agent = useAgent();
 
   // 효과음은 첫 사용자 입력 뒤에만 낼 수 있다
   useEffect(() => {
@@ -193,7 +178,7 @@ export default function App() {
         </div>
         <div className="col">
           <MappingPanel />
-          <TargetPlaceholder />
+          <AgentPanel controls={agent} />
         </div>
         <div className="row-full">
           <EventLog />

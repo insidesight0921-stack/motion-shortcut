@@ -945,3 +945,33 @@ kbd {
     padding: 0 var(--space-12);
   }
 }
+
+/* ---------- 에이전트 카드 ---------- */
+.agent-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--text-muted);
+}
+
+.agent-status.is-on {
+  color: var(--text-success);
+}
+
+.agent-facts {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-4) var(--space-12);
+}
+
+.agent-facts dt {
+  color: var(--text-subtle);
+}
+
+.agent-facts dd {
+  word-break: break-all;
+}
+
+.agent-actions {
+  margin-top: var(--space-12);
+}
