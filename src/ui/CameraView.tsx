@@ -30,7 +30,7 @@ export function CameraView({ session }: Props) {
     let frames = 0;
     let lastStat = performance.now();
     let lastHand = false;
-    const unsubFrame = session.onFrame(({ frame }) => {
+    const unsubFrame = session.onFrame(({ hands }) => {
       const canvas = canvasRef.current;
       const video = videoRef.current;
       if (canvas && video) {
@@ -41,12 +41,12 @@ export function CameraView({ session }: Props) {
         const ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height);
-          if (frame) drawHand(ctx, frame.landmarks, canvas.width, canvas.height);
+          for (const h of hands) drawHand(ctx, h.landmarks, canvas.width, canvas.height, h.hand);
         }
       }
       // 통계는 0.5초마다만 스토어에 반영
       frames++;
-      lastHand = frame !== null;
+      lastHand = hands.length > 0;
       const now = performance.now();
       if (now - lastStat >= 500) {
         setFrameStats(Math.round((frames * 1000) / (now - lastStat)), lastHand);

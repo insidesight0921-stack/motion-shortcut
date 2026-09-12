@@ -21,6 +21,8 @@ export interface HandFrame {
   landmarks: Point[];
   /** HandLandmarker가 준 손 신뢰도 (handedness score, 0~1) */
   score: number;
+  /** 사용자 기준 손 (vision/handedness.ts 가 결정). 없으면 모름. 한 손 파이프라인은 쓰지 않는다 */
+  hand?: 'left' | 'right';
 }
 
 export type StaticPose = 'open_palm' | 'fist';

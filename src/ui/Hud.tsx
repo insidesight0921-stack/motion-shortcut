@@ -30,17 +30,25 @@ export function Hud() {
   const enabled = useGestureStore((s) => s.enabled);
   const cooldownMs = useGestureStore((s) => s.config.cooldownMs);
   const inStandby = useModeStore((s) => s.current === 'standby');
+  const twoHand = useGestureStore((s) => s.twoHand);
 
-  const ringProgress = hud.phase === 'holding' || hud.phase === 'armed' ? hud.progress : 0;
+  const ringProgress = twoHand?.holding ? twoHand.progress : hud.phase === 'holding' || hud.phase === 'armed' ? hud.progress : 0;
   const cooldownFrac = hud.phase === 'cooldown' && hud.cooldownRemainingMs > 0 ? Math.min(1, hud.cooldownRemainingMs / cooldownMs) : 0;
 
-  const candidateText = hud.candidate
-    ? GESTURE_LABEL[hud.candidate]
-    : hud.staticPose?.pose
-      ? `${GESTURE_LABEL[hud.staticPose.pose]} 감지`
-      : hud.handScore === null
-        ? '손 없음'
-        : '후보 없음';
+  const handsText = twoHand ? twoHand.hands.map((h) => (h === 'left' ? '왼손' : h === 'right' ? '오른손' : '?')).join(' · ') : null;
+  const candidateText = twoHand?.holding
+    ? '양손 X 유지 중'
+    : twoHand?.pose === 'x_cross'
+      ? '양손 X 감지'
+      : twoHand?.pose === 'index_cross'
+        ? '양손 검지 교차 감지'
+        : hud.candidate
+          ? GESTURE_LABEL[hud.candidate]
+          : hud.staticPose?.pose
+            ? `${GESTURE_LABEL[hud.staticPose.pose]} 감지`
+            : hud.handScore === null
+              ? '손 없음'
+              : '후보 없음';
 
   return (
     <section className="card" aria-labelledby="hud-title">
@@ -86,6 +94,8 @@ export function Hud() {
         <dd className="num">{hud.motion.toFixed(2)} 손 크기/초</dd>
         <dt>마지막 실행</dt>
         <dd>{hud.lastExecuted ? GESTURE_LABEL[hud.lastExecuted] : '–'}</dd>
+        <dt>감지된 손</dt>
+        <dd>{handsText ?? '–'}</dd>
       </dl>
     </section>
   );

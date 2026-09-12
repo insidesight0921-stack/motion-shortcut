@@ -102,9 +102,15 @@ export default function App() {
         });
       }
     },
-    onBlocked: (gesture, gate) => {
-      // MOTION OFF·모드 전환 직후: 주먹 포함 모두 무시 (D-016·D-017)
-      useLogStore.getState().add({ gesture, result: 'ignored', reason: gate.reason });
+    onBlocked: (gesture, reason) => {
+      // MOTION OFF·모드 전환 직후·양손 진행 중·주먹 옵션 꺼짐: 주먹 포함 모두 무시 (D-016·D-017)
+      useLogStore.getState().add({ gesture, result: 'ignored', reason });
+    },
+    onTwoHand: () => {
+      // 양손 X 유지 → MOTION OFF 토글 (modeStore 가 이미 바뀐 뒤 호출된다). 전환 로그는 useVoice 의 모드 전환 구독이 남긴다
+      const off = useModeStore.getState().current === 'standby';
+      useGestureStore.getState().setEffect({ gestureLabel: '양손 X', label: off ? 'MOTION OFF' : `${MODES[useModeStore.getState().current].labelEn}`, tone: off ? 'off' : 'on', at: performance.now() });
+      playSound(off ? 'toggleOff' : 'toggleOn');
     },
     onExecute: (gesture) => {
       blurIframeFocus();

@@ -2,13 +2,17 @@ import type { HandLandmarker, HandLandmarkerResult } from '@mediapipe/tasks-visi
 import type { HandFrame } from '../gesture/types';
 import { describeCameraError, startCamera, stopCamera } from './camera';
 import { createHandLandmarker, DEFAULT_LANDMARKER_OPTIONS, type LandmarkerOptions } from './landmarker';
+import { toUserHand } from './handedness';
 import { toUserFrame } from './mirror';
 
 /** 프레임 리스너가 받는 값. frame이 null이면 손이 없다. */
 export interface VisionTick {
   /** performance.now() 기반 ms 타임스탬프 */
   t: number;
+  /** 첫 번째 손 (호환용). 주 손 선택은 엔진이 hands 로 한다 */
   frame: HandFrame | null;
+  /** 감지된 손 전부 (0~2개). 각 프레임에 사용자 기준 hand 라벨 */
+  hands: HandFrame[];
   /** 디버그·오버레이용 원본 결과 */
   raw: HandLandmarkerResult;
 }
@@ -106,16 +110,14 @@ export class VisionSession {
       this.lastTimestamp = t;
 
       const raw = this.landmarker.detectForVideo(video, t);
-      const hand = raw.landmarks[0];
-      const frame: HandFrame | null = hand
-        ? {
-            t,
-            landmarks: toUserFrame(hand),
-            // handedness score를 손 신뢰도로 사용 (HandLandmarkerResult가 노출하는 유일한 손 단위 점수)
-            score: raw.handedness[0]?.[0]?.score ?? 1,
-          }
-        : null;
-      const tick: VisionTick = { t, frame, raw };
+      const hands: HandFrame[] = raw.landmarks.map((lm, i) => ({
+        t,
+        landmarks: toUserFrame(lm),
+        // handedness score를 손 신뢰도로 사용 (HandLandmarkerResult가 노출하는 유일한 손 단위 점수)
+        score: raw.handedness[i]?.[0]?.score ?? 1,
+        hand: toUserHand(raw.handedness[i]?.[0]?.categoryName),
+      }));
+      const tick: VisionTick = { t, frame: hands[0] ?? null, hands, raw };
       for (const l of this.frameListeners) l(tick);
     }
     this.scheduleNext();

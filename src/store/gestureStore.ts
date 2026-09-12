@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { DEFAULT_CONFIG, type GestureConfig } from '../gesture/config';
 import type { HudState } from '../gesture/pipeline';
+import type { TwoHandPose } from '../gesture/twoHands';
 import type { VisionStatus } from '../vision/session';
 
 export const INITIAL_HUD: HudState = {
@@ -29,6 +30,8 @@ interface GestureStoreState {
   /** 마지막 실행 이펙트 (Effects 컴포넌트가 at 변화를 보고 표시) */
   effect: EffectState | null;
   muted: boolean;
+  /** 양손 판정 스냅샷 (HUD 표시용). 손이 두 개가 아니면 null */
+  twoHand: TwoHandHud | null;
 
   setVisionStatus: (status: VisionStatus, error: string | null) => void;
   setFrameStats: (fps: number, handDetected: boolean) => void;
@@ -39,6 +42,16 @@ interface GestureStoreState {
   resetConfig: () => void;
   setEffect: (effect: EffectState) => void;
   setMuted: (muted: boolean) => void;
+  setTwoHand: (twoHand: TwoHandHud | null) => void;
+}
+
+export interface TwoHandHud {
+  pose: TwoHandPose | null;
+  /** 양손 X 유지 진행률 0~1 */
+  progress: number;
+  holding: boolean;
+  /** 감지된 손 라벨 (실기에서 handedness 확인용) */
+  hands: ('left' | 'right' | '?')[];
 }
 
 export interface EffectState {
@@ -63,6 +76,7 @@ export const useGestureStore = create<GestureStoreState>((set) => ({
   config: DEFAULT_CONFIG,
   effect: null,
   muted: false,
+  twoHand: null,
 
   setVisionStatus: (visionStatus, visionError) => set({ visionStatus, visionError }),
   setFrameStats: (fps, handDetected) => set({ fps, handDetected }),
@@ -73,4 +87,5 @@ export const useGestureStore = create<GestureStoreState>((set) => ({
   resetConfig: () => set({ config: DEFAULT_CONFIG }),
   setEffect: (effect) => set({ effect }),
   setMuted: (muted) => set({ muted }),
+  setTwoHand: (twoHand) => set({ twoHand }),
 }));

@@ -93,6 +93,17 @@ export interface GestureConfig {
 
   /** 궤적 버퍼 보관 시간 */
   trajectoryMs: number;
+
+  /* ---- 양손 (gesture/twoHands.ts, modeGesture.ts — 추가 모듈, 한 손 파이프라인과 무관) ---- */
+  /** 양손 X 유지 시간 → MOTION OFF 토글 */
+  xHoldMs: number;
+  /** 양손 포즈 자체 점수 하한 */
+  twoHandMinScore: number;
+  /** 두 손 방향 벡터 사이 각도 허용 범위 (도). 이 범위 안에서 선분이 교차하면 X */
+  crossAngleMinDeg: number;
+  crossAngleMaxDeg: number;
+  /** 두 손목 사이 최대 거리 (손 크기 배수). 멀리 떨어진 두 손은 X 로 보지 않는다 */
+  crossMaxWristDistance: number;
 }
 
 export const DEFAULT_CONFIG: GestureConfig = {
@@ -140,6 +151,12 @@ export const DEFAULT_CONFIG: GestureConfig = {
   circleMaxAspect: 1.6,
 
   trajectoryMs: 1500,
+
+  xHoldMs: 1000,
+  twoHandMinScore: 0.6,
+  crossAngleMinDeg: 40,
+  crossAngleMaxDeg: 140,
+  crossMaxWristDistance: 2.5,
 };
 
 /** 개발 패널 슬라이더 범위. key는 GestureConfig의 키. */
@@ -176,4 +193,9 @@ export const CONFIG_RANGES: Record<keyof GestureConfig, { min: number; max: numb
   circleMinAspect: { min: 0.1, max: 1, step: 0.05, label: '원: 가로/세로 비율 하한' },
   circleMaxAspect: { min: 1, max: 5, step: 0.1, label: '원: 가로/세로 비율 상한' },
   trajectoryMs: { min: 500, max: 3000, step: 100, label: '궤적 보관(ms)' },
+  xHoldMs: { min: 300, max: 3000, step: 50, label: '양손 X 유지(ms)' },
+  twoHandMinScore: { min: 0, max: 1, step: 0.05, label: '양손 포즈 점수 하한' },
+  crossAngleMinDeg: { min: 10, max: 90, step: 5, label: '교차 각도 하한(도)' },
+  crossAngleMaxDeg: { min: 90, max: 170, step: 5, label: '교차 각도 상한(도)' },
+  crossMaxWristDistance: { min: 0.5, max: 5, step: 0.1, label: '교차 시 손목 최대 거리(손 크기)' },
 };

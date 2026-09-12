@@ -116,3 +116,25 @@ export function mirrorHand(pts: Point[]): Point[] {
 export function translateHand(pts: Point[], dx: number, dy: number): Point[] {
   return pts.map((p) => ({ x: p.x + dx, y: p.y + dy, z: p.z }));
 }
+
+/**
+ * 양손 배치 (twoHands 테스트용). 기본 손(오른손 모양)을 왼손은 좌우 반전해 쓴다.
+ * wristAt: 손목을 놓을 위치, rotDeg: 손목 기준 회전(양수 = 화면상 시계 방향, 위를 향한 손가락이 오른쪽으로 기움)
+ */
+export interface HandPlacement {
+  spec?: HandSpec;
+  wristAt: Point;
+  rotDeg?: number;
+}
+
+export function placeHand(p: HandPlacement, side: 'left' | 'right'): Point[] {
+  let pts = makeHand(p.spec);
+  if (side === 'left') pts = mirrorHand(pts);
+  if (p.rotDeg) pts = rotateHand(pts, (p.rotDeg * Math.PI) / 180);
+  const w = pts[LM.WRIST];
+  return translateHand(pts, p.wristAt.x - w.x, p.wristAt.y - w.y);
+}
+
+export function placeHands(left: HandPlacement, right: HandPlacement): { left: Point[]; right: Point[] } {
+  return { left: placeHand(left, 'left'), right: placeHand(right, 'right') };
+}

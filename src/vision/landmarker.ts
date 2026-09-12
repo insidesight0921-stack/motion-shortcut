@@ -8,6 +8,8 @@ import { HAND_MODEL_URL, WASM_BASE_URL } from './assets';
 export interface LandmarkerOptions {
   /** 'GPU'가 기본. WebGL 문제가 있는 환경에서는 'CPU'로 전환 (docs/DECISIONS.md D-002) */
   delegate: 'GPU' | 'CPU';
+  /** 2 = 양손 (모션 잠금·모드 전환용, D-017). 한 손만 보이면 기존 한 손 경로 그대로 */
+  numHands: 1 | 2;
   minHandDetectionConfidence: number;
   minHandPresenceConfidence: number;
   minTrackingConfidence: number;
@@ -15,6 +17,7 @@ export interface LandmarkerOptions {
 
 export const DEFAULT_LANDMARKER_OPTIONS: LandmarkerOptions = {
   delegate: 'GPU',
+  numHands: 2,
   minHandDetectionConfidence: 0.5,
   minHandPresenceConfidence: 0.5,
   minTrackingConfidence: 0.5,
@@ -28,8 +31,7 @@ export async function createHandLandmarker(opts: LandmarkerOptions = DEFAULT_LAN
       delegate: opts.delegate,
     },
     runningMode: 'VIDEO',
-    // 한 손 제스처만 다룬다(확정 결정). 두 손은 확장 지점으로만 남긴다.
-    numHands: 1,
+    numHands: opts.numHands,
     minHandDetectionConfidence: opts.minHandDetectionConfidence,
     minHandPresenceConfidence: opts.minHandPresenceConfidence,
     minTrackingConfidence: opts.minTrackingConfidence,
