@@ -10,12 +10,9 @@ export type VoiceStatus = 'unsupported' | 'off' | 'requesting' | 'listening' | '
 
 export interface VoiceState {
   status: VoiceStatus;
-  /** error 상태의 사유 (사람이 읽는 문장) */
   error?: string;
   lastUtterance?: string;
-  /** 마지막 발화의 해석 결과 (예: "switch:presentation", "의도 없음") */
   lastIntent?: string;
-  /** ko-KR 음성이 있어 TTS 를 낼 수 있는가 (보완 2) */
   ttsAvailable: boolean;
 }
 
@@ -27,17 +24,23 @@ export interface ModeSwitch {
   at: number;
 }
 
-export type GestureGate = { blocked: false } | { blocked: true; reason: '대기 모드' | '모드 전환 직후' };
+export type GestureGate = { blocked: false } | { blocked: true; reason: 'MOTION OFF' | '모드 전환 직후' };
 
-/** 순수 함수: 이 시점에 제스처 실행(주먹 포함)을 막아야 하는가 */
+/**
+ * 순수 함수: 이 시점에 제스처 실행(주먹 포함)을 막아야 하는가.
+ * standby = MOTION OFF (D-017). 우선순위: standby > 활성화 off(주먹 옵션) > 실행
+ */
 export function gestureGate(current: ModeId, cooldownUntil: number, now: number): GestureGate {
-  if (current === STANDBY) return { blocked: true, reason: '대기 모드' };
+  if (current === STANDBY) return { blocked: true, reason: 'MOTION OFF' };
   if (now < cooldownUntil) return { blocked: true, reason: '모드 전환 직후' };
   return { blocked: false };
 }
 
-/** 대기 해제를 허용하는 경로. 제스처로는 풀리지 않는다 */
-export const WAKE_SOURCES: SwitchSource[] = ['voice', 'ui', 'key'];
+/** MOTION OFF 해제를 허용하는 경로. 'gesture' 는 양손 전환 제스처(한 손 제스처는 여기로 오지 않는다) */
+export const WAKE_SOURCES: SwitchSource[] = ['voice', 'ui', 'key', 'gesture'];
+
+/** 발표 세션의 기본 사용자 모드 */
+export const DEFAULT_USER_MODE: ModeId = 'slide';
 
 interface ModeState {
   current: ModeId;
@@ -48,11 +51,14 @@ interface ModeState {
   voice: VoiceState;
   ttsEnabled: boolean;
 
-  /** 모드를 바꾼다. 같은 모드면 false. 대기에서 나올 때(= wake)는 WAKE_SOURCES 만 허용 */
+  /** 모드를 바꾼다. 같은 모드면 false. standby 에서 나올 때는 WAKE_SOURCES 만 허용 */
   setMode: (id: ModeId, source: SwitchSource, opts?: { utterance?: string; now?: number }) => boolean;
+  /** MOTION OFF 진입. 어느 경로든 허용 ('agent' = 긴급 정지) */
   standby: (source: SwitchSource, opts?: { utterance?: string; now?: number }) => boolean;
-  /** previous(사용자 모드) 로 복귀. previous 가 없으면 media */
+  /** previous(사용자 모드) 로 복귀. previous 가 없으면 slide */
   wake: (source: SwitchSource, opts?: { utterance?: string; now?: number }) => boolean;
+  /** 양손 X 유지 등 토글 경로: standby 면 wake, 아니면 standby */
+  toggleStandby: (source: SwitchSource, opts?: { utterance?: string; now?: number }) => boolean;
   gate: (now?: number) => GestureGate;
 
   setVoice: (patch: Partial<VoiceState>) => void;
@@ -79,7 +85,8 @@ function saveTtsEnabled(enabled: boolean): void {
 }
 
 export const useModeStore = create<ModeState>((set, get) => ({
-  current: 'media',
+  // 모션 기본값 OFF (§19): 세션은 standby 에서 시작한다
+  current: STANDBY,
   previous: null,
   switchedAt: 0,
   cooldownUntil: 0,
@@ -106,9 +113,10 @@ export const useModeStore = create<ModeState>((set, get) => ({
     const { current, previous } = get();
     if (current !== STANDBY) return false;
     if (!WAKE_SOURCES.includes(source)) return false;
-    const target: ModeId = previous && previous !== STANDBY ? previous : 'media';
+    const target: ModeId = previous && previous !== STANDBY ? previous : DEFAULT_USER_MODE;
     return get().setMode(target, source, opts);
   },
+  toggleStandby: (source, opts) => (get().current === STANDBY ? get().wake(source, opts) : get().standby(source, opts)),
   gate: (now = Date.now()) => gestureGate(get().current, get().cooldownUntil, now),
 
   setVoice: (patch) => set((s) => ({ voice: { ...s.voice, ...patch } })),

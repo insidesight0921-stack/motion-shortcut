@@ -8,8 +8,8 @@ const standby = { inStandby: true };
 
 describe('normalize', () => {
   it('공백·문장부호 제거, 소문자', () => {
-    expect(normalize('발표 모드.')).toBe('발표모드');
-    expect(normalize('  Media  Mode! ')).toBe('mediamode');
+    expect(normalize('레이저 모드.')).toBe('레이저모드');
+    expect(normalize('  Slide  Mode! ')).toBe('slidemode');
     expect(normalize('잠깐, 멈춰~')).toBe('잠깐멈춰');
   });
 });
@@ -31,39 +31,40 @@ describe('별칭 전부 매칭', () => {
   });
 });
 
-describe('한국어 발화 변형 (보완 1)', () => {
-  it('띄어쓰기 변형 "발표모드"', () => {
-    expect(describeIntent(match(['발표모드'], active)!.intent)).toBe('switch:presentation');
+describe('한국어 발화 변형 (D-016 보완 1)', () => {
+  it('띄어쓰기 변형 "레이저모드"', () => {
+    expect(describeIntent(match(['레이저모드'], active)!.intent)).toBe('switch:laser');
   });
 
-  it('조사·서술어가 붙은 "발표 모드로 바꿔줘"는 포함 매칭으로 통과', () => {
-    expect(describeIntent(match(['발표 모드로 바꿔줘'], active)!.intent)).toBe('switch:presentation');
-    expect(describeIntent(match(['미디어 모드로 가자'], active)!.intent)).toBe('switch:media');
-    expect(describeIntent(match(['지금부터 회의 모드'], active)!.intent)).toBe('switch:meeting');
+  it('조사·서술어가 붙은 "레이저 모드로 바꿔줘"는 포함 매칭으로 통과', () => {
+    expect(describeIntent(match(['레이저 모드로 바꿔줘'], active)!.intent)).toBe('switch:laser');
+    expect(describeIntent(match(['슬라이드 모드로 가자'], active)!.intent)).toBe('switch:slide');
+    expect(describeIntent(match(['지금부터 커서 모드'], active)!.intent)).toBe('switch:cursor');
+    expect(describeIntent(match(['발표 모드로 돌아가'], active)!.intent)).toBe('switch:slide');
   });
 
-  it('단독 단어가 문장 속에 있으면 매칭하지 않는다: "발표 준비해"', () => {
-    expect(match(['발표 준비해'], active)).toBeNull();
-    expect(match(['영상 하나 틀어줘'], active)).toBeNull();
+  it('단독 단어가 문장 속에 있으면 매칭하지 않는다: "레이저 좀 켜봐"', () => {
+    expect(match(['레이저 좀 켜봐'], active)).toBeNull();
+    expect(match(['자료 하나 보여줘'], active)).toBeNull();
   });
 
-  it('단독 단어는 완전 일치만: "발표", "발표."', () => {
-    expect(describeIntent(match(['발표'], active)!.intent)).toBe('switch:presentation');
-    expect(describeIntent(match(['발표.'], active)!.intent)).toBe('switch:presentation');
+  it('단독 단어는 완전 일치만: "레이저", "레이저."', () => {
+    expect(describeIntent(match(['레이저'], active)!.intent)).toBe('switch:laser');
+    expect(describeIntent(match(['레이저.'], active)!.intent)).toBe('switch:laser');
   });
 
-  it('긴 별칭 우선: "미디어 모드"는 media 로, 부분 문자열 "미디어"에 잡히지 않는다', () => {
-    const r = match(['미디어 모드'], active)!;
-    expect(r.alias).toBe('미디어 모드');
+  it('긴 별칭 우선: "슬라이드 모드"는 부분 문자열 "슬라이드"에 잡히지 않는다', () => {
+    const r = match(['슬라이드 모드'], active)!;
+    expect(r.alias).toBe('슬라이드 모드');
   });
 });
 
 describe('대안 3개', () => {
   it('첫 번째가 틀리고 두 번째가 맞으면 두 번째를 채택', () => {
-    const r = match(['발표 준비해', '발표 모드', '발포 모드'], active)!;
+    const r = match(['레이저 좀 켜봐', '레이저 모드', '레이져 모드'], active)!;
     expect(r).not.toBeNull();
-    expect(describeIntent(r.intent)).toBe('switch:presentation');
-    expect(r.utterance).toBe('발표 모드');
+    expect(describeIntent(r.intent)).toBe('switch:laser');
+    expect(r.utterance).toBe('레이저 모드');
   });
 
   it('셋 다 틀리면 null', () => {
@@ -71,13 +72,13 @@ describe('대안 3개', () => {
   });
 });
 
-describe('대기 모드 규칙', () => {
-  it('대기 중 단독 단어("발표")는 거부, "발표 모드"는 허용', () => {
-    expect(match(['발표'], standby)).toBeNull();
-    expect(describeIntent(match(['발표 모드'], standby)!.intent)).toBe('switch:presentation');
+describe('MOTION OFF(standby) 규칙', () => {
+  it('꺼진 상태에서 단독 단어("레이저")는 거부, "레이저 모드"는 허용', () => {
+    expect(match(['레이저'], standby)).toBeNull();
+    expect(describeIntent(match(['레이저 모드'], standby)!.intent)).toBe('switch:laser');
   });
 
-  it('대기 중 해제 별칭은 허용, 대기 진입 별칭은 무시', () => {
+  it('꺼진 상태에서 해제 별칭은 허용, 진입 별칭은 무시', () => {
     expect(describeIntent(match(['깨어나'], standby)!.intent)).toBe('wake');
     expect(describeIntent(match(['다시 시작'], standby)!.intent)).toBe('wake');
     expect(match(['대기'], standby)).toBeNull();

@@ -11,6 +11,10 @@ export function describeSource(source: SwitchSource, utterance?: string): string
       return '화면';
     case 'key':
       return '키보드';
+    case 'gesture':
+      return '양손 제스처';
+    case 'agent':
+      return '에이전트 긴급 정지';
     case 'init':
       return '초기값';
   }
@@ -22,7 +26,7 @@ export function logModeSwitch(sw: ModeSwitch): void {
     subject: '모드 전환',
     result: 'executed',
     command: `${sw.from} → ${sw.to}`,
-    note: `${describeSource(sw.source, sw.utterance)} · ${MODES[sw.to].name} 모드`,
+    note: `${describeSource(sw.source, sw.utterance)} · ${MODES[sw.to].labelEn}`,
     time: sw.at,
   });
 }

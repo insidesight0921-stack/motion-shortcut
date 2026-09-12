@@ -60,7 +60,8 @@ export function useVoice(): VoiceControls {
       logModeSwitch(sw);
       if (!s.ttsEnabled || !s.voice.ttsAvailable) return;
       rec.pause();
-      const spoke = speak(`${MODES[sw.to].name} 모드`, { onEnd: () => rec.resume() });
+      const text = sw.to === 'standby' ? '모션 꺼짐' : `${MODES[sw.to].name} 모드`;
+      const spoke = speak(text, { onEnd: () => rec.resume() });
       if (!spoke) rec.resume();
     });
 

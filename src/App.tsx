@@ -5,10 +5,9 @@ import { MODES } from './modes/catalog';
 import { isUserMode } from './modes/types';
 import { useGestureStore } from './store/gestureStore';
 import { useLogStore } from './store/logStore';
-import { useMappingStore } from './store/mappingStore';
 import { useModeStore } from './store/modeStore';
-import { Timer } from './targets/timer/Timer';
-import { YouTubePlayer } from './targets/youtube/YouTubePlayer';
+import { useProfileStore } from './store/profileStore';
+import { useUiStore } from './store/uiStore';
 import { ActivationToggle } from './ui/ActivationToggle';
 import { CameraView } from './ui/CameraView';
 import { DevPanel } from './ui/DevPanel';
@@ -16,7 +15,6 @@ import { Effects } from './ui/Effects';
 import { EventLog } from './ui/EventLog';
 import { GESTURE_LABEL, Hud } from './ui/Hud';
 import { IconSoundOff, IconSoundOn } from './ui/icons';
-import { LastKeyIndicator } from './ui/LastKeyIndicator';
 import { MappingEditor } from './ui/MappingEditor';
 import { ModeSwitcher } from './ui/ModeSwitcher';
 import { useActivationShortcut, useModeShortcuts } from './ui/shortcuts';
@@ -26,34 +24,27 @@ import { useVoice } from './ui/useVoice';
 import { VoiceIndicator } from './ui/VoiceIndicator';
 import { VisionSession } from './vision/session';
 
-/** YouTube iframe이 포커스를 가지면 단축키가 페이지에 오지 않으므로 명령 실행 후 포커스를 돌려놓는다 */
+/** YouTube iframe 등이 포커스를 가지면 단축키가 페이지에 오지 않으므로 명령 실행 후 포커스를 돌려놓는다 */
 function blurIframeFocus() {
   const el = document.activeElement;
   if (el instanceof HTMLIFrameElement) el.blur();
 }
 
-/** 모드별 데모 대상. targets 가 비어 있으면 빈 상태 카드 (사실만 적는다) */
-function Targets({ onTimerDone }: { onTimerDone: () => void }) {
+/** 발표 대상은 로컬 에이전트가 담당한다 (1-4 에서 연결). 그때까지 자리 표시 */
+function TargetPlaceholder() {
   const current = useModeStore((s) => s.current);
   const def = MODES[current];
-  if (def.targets.length === 0) {
-    return (
-      <section className="card" aria-labelledby="targets-empty-title">
-        <div className="card-head">
-          <h2 id="targets-empty-title" className="t-title-3">
-            {def.name} 모드 대상
-          </h2>
-        </div>
-        <p className="t-body-2 t-subtle reading">{def.description}</p>
-      </section>
-    );
-  }
   return (
-    <>
-      {def.targets.includes('youtube') && <YouTubePlayer />}
-      {def.targets.includes('timer') && <Timer onDone={onTimerDone} />}
-      {def.targets.includes('lastKey') && <LastKeyIndicator />}
-    </>
+    <section className="card" aria-labelledby="targets-title">
+      <div className="card-head">
+        <h2 id="targets-title" className="t-title-3">
+          {def.labelEn}
+        </h2>
+        <span className="t-caption t-muted">{def.name}</span>
+      </div>
+      <p className="t-body-2 t-subtle reading">{def.description}</p>
+      <p className="t-caption t-muted reading">실제 슬라이드·커서·레이저 제어는 로컬 에이전트가 수행합니다. 에이전트 연결은 다음 커밋에서 붙습니다.</p>
+    </section>
   );
 }
 
@@ -64,7 +55,7 @@ function MappingPanel() {
       <section className="card" aria-labelledby="mapping-standby-title">
         <div className="card-head">
           <h2 id="mapping-standby-title" className="t-title-3">
-            대기 모드
+            MOTION OFF
           </h2>
         </div>
         <p className="t-body-2 t-subtle reading">{MODES.standby.description}</p>
@@ -127,7 +118,7 @@ export default function App() {
       }
     },
     onBlocked: (gesture, gate) => {
-      // 대기 모드·모드 전환 직후: 주먹 포함 모두 무시 (D-016)
+      // MOTION OFF·모드 전환 직후: 주먹 포함 모두 무시 (D-016·D-017)
       useLogStore.getState().add({ gesture, result: 'ignored', reason: gate.reason });
     },
     onExecute: (gesture) => {
@@ -146,8 +137,9 @@ export default function App() {
 
       const current = useModeStore.getState().current;
       if (!isUserMode(current)) return; // 게이트가 먼저 막지만 방어적으로
-      const { byMode, capturing } = useMappingStore.getState();
-      const exec = runMapping(byMode[current], gesture, { now: Date.now(), toggleEnabled }, { paused: capturing, pausedReason: '키 캡처 중' });
+      const mapping = useProfileStore.getState().mapping(current);
+      const capturing = useUiStore.getState().capturing;
+      const exec = runMapping(mapping, gesture, { now: Date.now(), toggleEnabled }, { paused: capturing, pausedReason: '키 캡처 중' });
       const commandName = exec.def?.name;
 
       log.add({
@@ -155,7 +147,7 @@ export default function App() {
         result: exec.status,
         command: commandName,
         reason: exec.status === 'executed' ? undefined : exec.message,
-        note: exec.status === 'executed' ? `${exec.message} · ${MODES[current].name} 모드` : `${MODES[current].name} 모드`,
+        note: exec.status === 'executed' ? `${exec.message} · ${MODES[current].labelEn}` : MODES[current].labelEn,
       });
       setEffect({
         gestureLabel,
@@ -172,7 +164,7 @@ export default function App() {
       <header className="topbar">
         <div className="container topbar-inner">
           <div className="topbar-title">
-            <h1 className="t-title-2">모션 단축키</h1>
+            <h1 className="t-title-2">Flickey</h1>
           </div>
           <div className="topbar-actions">
             <ActivationToggle />
@@ -201,7 +193,7 @@ export default function App() {
         </div>
         <div className="col">
           <MappingPanel />
-          <Targets onTimerDone={() => playSound('timerDone')} />
+          <TargetPlaceholder />
         </div>
         <div className="row-full">
           <EventLog />

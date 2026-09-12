@@ -4,11 +4,11 @@ import { matchesActivationShortcut, matchesModeShortcut, type KeyLike } from '..
 describe('matchesModeShortcut', () => {
   const k = (code: string, o: Partial<KeyLike> = {}): KeyLike => ({ code, ctrlKey: true, shiftKey: true, altKey: false, metaKey: false, repeat: false, ...o });
 
-  it('Ctrl+Shift+1~4 → 모드, 0 → 대기', () => {
-    expect(matchesModeShortcut(k('Digit1'))).toBe('media');
-    expect(matchesModeShortcut(k('Digit2'))).toBe('reading');
-    expect(matchesModeShortcut(k('Digit3'))).toBe('presentation');
-    expect(matchesModeShortcut(k('Digit4'))).toBe('meeting');
+  it('Ctrl+Shift+1~4 → slide/cursor/laser/asset, 0 → MOTION OFF(standby)', () => {
+    expect(matchesModeShortcut(k('Digit1'))).toBe('slide');
+    expect(matchesModeShortcut(k('Digit2'))).toBe('cursor');
+    expect(matchesModeShortcut(k('Digit3'))).toBe('laser');
+    expect(matchesModeShortcut(k('Digit4'))).toBe('asset');
     expect(matchesModeShortcut(k('Digit0'))).toBe('standby');
   });
 

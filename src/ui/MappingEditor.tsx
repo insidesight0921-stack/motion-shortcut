@@ -9,7 +9,8 @@ import { MODES } from '../modes/catalog';
 import type { UserModeId } from '../modes/types';
 import { useGestureStore } from '../store/gestureStore';
 import { useLogStore } from '../store/logStore';
-import { useMappingStore } from '../store/mappingStore';
+import { useProfileStore } from '../store/profileStore';
+import { useUiStore } from '../store/uiStore';
 import { GESTURE_LABEL } from './Hud';
 import { IconGestureCircle, IconGestureFist, IconGestureOpenPalm, IconGestureSwipeLeft, IconGestureSwipeRight, IconLock } from './icons';
 import { KeyCaptureInput } from './KeyCaptureInput';
@@ -29,16 +30,17 @@ interface Props {
 }
 
 /**
- * 현재 모드의 제스처 ↔ 명령 매핑 편집기. 변경은 즉시 반영되고 localStorage(v2, 모드별)에 저장된다.
+ * 현재 프로필·현재 모드의 제스처 ↔ 명령 매핑 편집기. 변경은 즉시 반영되고 프로필(v3)에 저장된다.
  * 주먹은 활성화 on/off 로 고정되어 편집할 수 없다 (잠금 해제 경로 안전장치).
  * data-mapping-editor: key.press 가 이 안의 폼 요소를 대상으로 삼지 않게 하는 표식 (D-015 보완 3).
  */
 export function MappingEditor({ mode }: Props) {
-  const mapping = useMappingStore((s) => s.byMode[mode]);
-  const setCommand = useMappingStore((s) => s.setCommand);
-  const setParams = useMappingStore((s) => s.setParams);
-  const reset = useMappingStore((s) => s.reset);
-  const setCapturing = useMappingStore((s) => s.setCapturing);
+  const mapping = useProfileStore((s) => s.profiles.find((p) => p.id === s.activeProfileId)?.mappingByMode[mode] ?? s.profiles[0].mappingByMode[mode]);
+  const profileName = useProfileStore((s) => s.profiles.find((p) => p.id === s.activeProfileId)?.name ?? '');
+  const setCommand = useProfileStore((s) => s.setCommand);
+  const setParams = useProfileStore((s) => s.setParams);
+  const reset = useProfileStore((s) => s.resetMapping);
+  const setCapturing = useUiStore((s) => s.setCapturing);
   const baseId = useId();
   const def = MODES[mode];
   const empty = !hasAnyCommand(mapping);
@@ -74,7 +76,7 @@ export function MappingEditor({ mode }: Props) {
           <h2 id="mapping-title" className="t-title-3">
             {def.name} 모드 매핑
           </h2>
-          <p className="t-caption t-muted">바꾸면 바로 적용되고 이 브라우저에 모드별로 저장됩니다</p>
+          <p className="t-caption t-muted">프로필 "{profileName}" · 바꾸면 바로 적용되고 프로필에 저장됩니다</p>
         </div>
         <button type="button" className="btn btn-ghost btn-sm" onClick={() => reset(mode)}>
           기본값으로 되돌리기

@@ -51,7 +51,7 @@ export function Hud() {
         {inStandby ? (
           <span className="hud-badge t-caption is-off">
             <StatusDot />
-            대기 중 — 음성·키보드·화면으로 해제
+            MOTION OFF — 양손 X·키보드·화면으로 켜기
           </span>
         ) : (
           <span className={`hud-badge t-caption ${enabled ? 'is-on' : 'is-off'}`}>
