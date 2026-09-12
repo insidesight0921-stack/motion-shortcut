@@ -24,7 +24,7 @@ describe('mapping/storage', () => {
     const m: Mapping = {
       ...DEFAULT_MAPPING,
       open_palm: { commandId: 'key.press', params: { combo: 'Space' } },
-      swipe_right: { commandId: 'media.seekForward', params: { seconds: 30 } },
+      swipe_right: { commandId: 'slide.goto', params: { slide: 30 } },
     };
     saveMapping(m, s);
     const stored = JSON.parse(s.getItem(MAPPING_STORAGE_KEY)!);
@@ -51,7 +51,7 @@ describe('mapping/storage', () => {
         version: 1,
         mapping: {
           open_palm: { commandId: 'bogus.command', params: {} },
-          swipe_right: { commandId: 'media.seekForward', params: { seconds: 9999 } }, // 범위 밖
+          swipe_right: { commandId: 'slide.goto', params: { slide: 9999 } }, // 범위 밖
           swipe_left: { commandId: 'key.press', params: { combo: 'Shift+K' } }, // 정상
           circle: 'garbage',
         },
@@ -65,7 +65,7 @@ describe('mapping/storage', () => {
   });
 
   it('주먹 매핑을 덮어쓰려는 입력은 무시된다', () => {
-    const m = normalizeMapping({ fist: { commandId: 'media.playPause', params: {} } });
+    const m = normalizeMapping({ fist: { commandId: 'slide.next', params: {} } });
     expect(m.fist).toEqual(LOCKED_ENTRY);
     const s = memoryStorage();
     saveMapping({ ...DEFAULT_MAPPING, fist: { commandId: 'key.press', params: { combo: 'Space' } } }, s);
@@ -78,7 +78,7 @@ describe('mapping/storage', () => {
   });
 
   it('파라미터가 없으면 그 명령의 기본값을 채운다', () => {
-    const m = normalizeMapping({ circle: { commandId: 'timer.toggle' } });
-    expect(m.circle).toEqual({ commandId: 'timer.toggle', params: { minutes: 3 } });
+    const m = normalizeMapping({ circle: { commandId: 'slide.goto' } });
+    expect(m.circle).toEqual({ commandId: 'slide.goto', params: { slide: 1 } });
   });
 });

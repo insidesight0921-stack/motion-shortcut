@@ -1,4 +1,4 @@
-import { emptyMapping } from '../mapping/defaults';
+import { cloneMapping, DEFAULT_MAPPING, emptyMapping } from '../mapping/defaults';
 import { LOCKED_ENTRY, type Mapping } from '../mapping/types';
 import {
   AGENT_PORT_DEFAULT,
@@ -25,21 +25,16 @@ export function defaultSettings(): ProfileSettings {
 }
 
 /**
- * 슬라이드 모드 기본 매핑 (기획서 §13·§19).
- * 1-3 에서 slide.* 명령이 생기면 key.press 를 그 명령으로 바꾼다. 지금은 발표 프로그램 공통 키를 직접 쓴다.
- *  - 오른쪽 스와이프 → 다음(→), 왼쪽 스와이프 → 이전(←)
- *  - 손바닥 → 화면 가리기(B, 다시 누르면 복귀. 낮은 위험)
+ * 슬라이드 모드 기본 매핑 (기획서 §13·§19). 프로그램별 키는 slide.* 명령이 실행 시점에 고른다.
+ *  - 오른쪽 스와이프 → 다음, 왼쪽 스와이프 → 이전
+ *  - 손바닥 → 화면 가리기(B, 다시 실행하면 복귀. 낮은 위험)
  *  - 원 → 발표 화면 복귀(Esc). 의도적 동작이라 높은 위험 명령에 배정
  *  - 주먹 → 고정 (settings.motionToggle === 'fist' 일 때만 동작)
  */
 export function defaultSlideMapping(_program: Program): Mapping {
-  return {
-    open_palm: { commandId: 'key.press', params: { combo: 'B' } },
-    swipe_right: { commandId: 'key.press', params: { combo: 'ArrowRight' } },
-    swipe_left: { commandId: 'key.press', params: { combo: 'ArrowLeft' } },
-    circle: { commandId: 'key.press', params: { combo: 'Escape' } },
-    fist: { ...LOCKED_ENTRY, params: {} },
-  };
+  const m = cloneMapping(DEFAULT_MAPPING);
+  m.fist = { ...LOCKED_ENTRY, params: {} };
+  return m;
 }
 
 /** 모드별 기본 매핑. cursor/laser/asset 은 2·3차에서 채우며 지금은 빈 프리셋 */

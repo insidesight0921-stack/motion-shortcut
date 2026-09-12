@@ -23,8 +23,19 @@ import type { MappingByPresentationMode, Program } from './types';
 export const LEGACY_MODE_IDS = ['media', 'reading', 'presentation', 'meeting'] as const;
 type LegacyModeId = (typeof LEGACY_MODE_IDS)[number];
 
-/** 슬라이드 모드에 붙일 수 있는 명령. 1-3 에서 slide.* 가 추가된다 */
-export const SLIDE_ALLOWED_COMMANDS: readonly string[] = ['key.press', 'none', 'system.toggleEnabled'];
+/** 슬라이드 모드에 남길 수 있는 명령 (옛 media.*·timer.toggle 은 제외된다) */
+export const SLIDE_ALLOWED_COMMANDS: readonly string[] = [
+  'slide.next',
+  'slide.prev',
+  'slide.first',
+  'slide.goto',
+  'slide.start',
+  'slide.blackout',
+  'slide.return',
+  'key.press',
+  'none',
+  'system.toggleEnabled',
+];
 
 export function isSlideAllowed(id: CommandId): boolean {
   return SLIDE_ALLOWED_COMMANDS.includes(id);

@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { COMMANDS, defaultParams } from '../commands/catalog';
+import { setProgramProvider } from '../commands/programProvider';
 import type { CommandId, CommandParams } from '../commands/types';
 import type { GestureId } from '../gesture/types';
 import { LOCKED_GESTURE, type Mapping, type MappingEntry } from '../mapping/types';
@@ -106,3 +107,6 @@ export const useProfileStore = create<ProfileState>((set, get) => {
     dismissMigrationNotice: () => set({ migratedFromLegacy: false }),
   };
 });
+
+// slide.* 명령이 활성 프로필의 프로그램을 알 수 있게 한다 (순환 import 회피)
+setProgramProvider(() => useProfileStore.getState().active().program);

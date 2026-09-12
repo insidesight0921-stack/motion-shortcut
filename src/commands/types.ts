@@ -1,21 +1,27 @@
 /**
- * 명령 계층 타입. 제스처 인식(gesture/)과 화면 기능을 잇는 얇은 인터페이스.
- * 명령은 특정 상황(요리 등)에 묶이지 않는 범용 동작이며, 사용자가 매핑 편집기에서 제스처에 연결한다.
+ * 명령 계층 타입. 제스처 인식(gesture/)과 발표 제어를 잇는 얇은 인터페이스.
+ * 명령은 프로필의 모드별 매핑에서 제스처에 연결된다. 실행 출구는 agent/dispatch.ts (에이전트 우선, 페이지 폴백).
  */
 export type CommandId =
-  | 'media.playPause'
-  | 'media.seekForward'
-  | 'media.seekBackward'
-  | 'timer.toggle'
+  | 'slide.next'
+  | 'slide.prev'
+  | 'slide.first'
+  | 'slide.goto'
+  | 'slide.start'
+  | 'slide.blackout'
+  | 'slide.return'
   | 'key.press'
   | 'none'
   | 'system.toggleEnabled';
 
 export const ALL_COMMAND_IDS: CommandId[] = [
-  'media.playPause',
-  'media.seekForward',
-  'media.seekBackward',
-  'timer.toggle',
+  'slide.next',
+  'slide.prev',
+  'slide.first',
+  'slide.goto',
+  'slide.start',
+  'slide.blackout',
+  'slide.return',
   'key.press',
   'none',
   'system.toggleEnabled',
@@ -26,7 +32,7 @@ export type ParamSchema =
   | { kind: 'none' }
   | {
       kind: 'number';
-      key: 'seconds' | 'minutes';
+      key: 'seconds' | 'minutes' | 'slide';
       label: string;
       unit: string;
       min: number;
@@ -46,19 +52,23 @@ export interface CommandContext {
 }
 
 export interface CommandResult {
-  /** false = 실행 실패 (예: 플레이어 미준비). 로그에 "실행 실패 · 사유"로 남는다 */
+  /** false = 실행 실패. 로그에 "실행 실패 · 사유"로 남는다 */
   ok: boolean;
   message: string;
 }
+
+/** 기획서 §16 명령별 안전 수준 */
+export type RiskLevel = 'low' | 'medium' | 'high';
 
 export interface CommandDef {
   id: CommandId;
   /** 드롭다운 표시명 */
   name: string;
-  /** 도움말. 한계가 있으면 여기 적는다 (key.press의 isTrusted) */
+  /** 도움말. 한계가 있으면 여기 적는다 */
   description: string;
   params: ParamSchema;
   /** false면 매핑 편집기 드롭다운에 노출하지 않는다 (system.toggleEnabled) */
   assignable: boolean;
+  risk: RiskLevel;
   run(params: CommandParams, ctx: CommandContext): CommandResult;
 }

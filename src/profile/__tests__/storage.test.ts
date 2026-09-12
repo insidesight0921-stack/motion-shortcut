@@ -27,7 +27,7 @@ describe('기본값', () => {
     const p = createProfile('테스트', 'keynote', NOW);
     expect(p.program).toBe('keynote');
     expect(p.mappingByMode.slide).toEqual(defaultSlideMapping('keynote'));
-    expect(p.mappingByMode.slide.swipe_right).toEqual({ commandId: 'key.press', params: { combo: 'ArrowRight' } });
+    expect(p.mappingByMode.slide.swipe_right).toEqual({ commandId: 'slide.next', params: {} });
     expect(p.mappingByMode.cursor).toEqual(emptyMapping());
     for (const m of PRESENTATION_MODES) expect(p.mappingByMode[m].fist).toEqual(LOCKED_ENTRY);
     expect(p.settings).toEqual(defaultSettings());
@@ -144,13 +144,13 @@ describe('v2 → v3 승격 (D-017)', () => {
   });
 
   it('presentation 에 media.* 가 매핑돼 있었으면 none', () => {
-    const m = migrateLegacyToProfileMapping({ presentation: { ...emptyMapping(), open_palm: { commandId: 'media.playPause', params: {} }, swipe_right: { commandId: 'key.press', params: { combo: 'ArrowRight' } } } }, 'powerpoint');
+    const m = migrateLegacyToProfileMapping({ presentation: { ...emptyMapping(), open_palm: { commandId: 'media.playPause' as never, params: {} }, swipe_right: { commandId: 'key.press', params: { combo: 'ArrowRight' } } } }, 'powerpoint');
     expect(m.slide.open_palm.commandId).toBe('none');
     expect(m.slide.swipe_right.params).toEqual({ combo: 'ArrowRight' });
   });
 
   it('옛 데이터가 전부 비어 있으면(손대지 않은 프리셋) 새 기본 슬라이드 매핑', () => {
-    const m = migrateLegacyToProfileMapping({ presentation: emptyMapping(), media: { ...emptyMapping(), open_palm: { commandId: 'media.playPause', params: {} } } }, 'keynote');
+    const m = migrateLegacyToProfileMapping({ presentation: emptyMapping(), media: { ...emptyMapping(), open_palm: { commandId: 'media.playPause' as never, params: {} } } }, 'keynote');
     expect(m.slide).toEqual(defaultSlideMapping('keynote'));
   });
 

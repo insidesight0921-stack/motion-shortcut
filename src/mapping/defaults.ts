@@ -1,11 +1,15 @@
 import { LOCKED_ENTRY, type Mapping } from './types';
 
-/** 기본 매핑. 손바닥→재생/일시정지, 오른쪽→+10초, 왼쪽→−10초, 원→3분 타이머, 주먹→활성화(고정) */
+/**
+ * 기본 매핑 = 슬라이드 모드 기본값 (기획서 §13·§19, D-017).
+ * 오른쪽 스와이프→다음, 왼쪽→이전, 손바닥→화면 가리기(B), 원→발표 화면 복귀(Esc), 주먹→활성화(고정).
+ * 정규화 폴백의 기본 base 로도 쓰인다.
+ */
 export const DEFAULT_MAPPING: Mapping = {
-  open_palm: { commandId: 'media.playPause', params: {} },
-  swipe_right: { commandId: 'media.seekForward', params: { seconds: 10 } },
-  swipe_left: { commandId: 'media.seekBackward', params: { seconds: 10 } },
-  circle: { commandId: 'timer.toggle', params: { minutes: 3 } },
+  open_palm: { commandId: 'slide.blackout', params: {} },
+  swipe_right: { commandId: 'slide.next', params: {} },
+  swipe_left: { commandId: 'slide.prev', params: {} },
+  circle: { commandId: 'slide.return', params: {} },
   fist: LOCKED_ENTRY,
 };
 
