@@ -499,82 +499,6 @@ kbd {
   color: var(--text-subtle);
 }
 
-/* ---------- YouTube 카드 ---------- */
-.yt-frame {
-  position: relative;
-  width: 100%;
-  aspect-ratio: 16 / 9;
-  background: var(--bg-muted);
-  border-radius: var(--radius-12);
-  overflow: hidden;
-}
-
-.yt-host,
-.yt-host > div,
-.yt-host iframe {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  border: 0;
-}
-
-.yt-skeleton {
-  position: absolute;
-  inset: 0;
-  border-radius: 0;
-}
-
-.yt-form {
-  margin-top: var(--space-16);
-}
-
-.yt-form-row {
-  display: flex;
-  gap: var(--space-8);
-}
-
-.yt-form-row .input {
-  flex: 1;
-  min-width: 0;
-}
-
-.yt-form-row .btn {
-  height: var(--control-lg);
-  flex: none;
-}
-
-/* ---------- 타이머 카드 ---------- */
-.timer-time {
-  margin-top: var(--space-8);
-}
-
-.timer-time.is-done {
-  color: var(--text-success);
-}
-
-.timer-track {
-  height: var(--space-8);
-  margin-top: var(--space-12);
-  border-radius: var(--radius-8);
-  background: var(--bg-muted);
-  overflow: hidden;
-}
-
-/* width 대신 transform: scaleX (§7 레이아웃 속성 애니메이션 금지) */
-.timer-fill {
-  height: 100%;
-  background: var(--brand-accent);
-  transform-origin: left center;
-  transition: transform var(--duration-base) linear;
-}
-
-.timer-actions {
-  display: flex;
-  gap: var(--space-8);
-  margin-top: var(--space-16);
-}
-
 /* ---------- 개발 패널 (개발자용: 토큰만 지킨다, 기본 접힘, Ghost로 열기) ---------- */
 .dev-toggle {
   position: fixed;
@@ -683,7 +607,6 @@ kbd {
     animation: fx-leave var(--duration-fast) var(--ease-in) both;
   }
 
-  .timer-fill,
   .hud-ring-progress {
     transition: none;
   }
@@ -790,36 +713,6 @@ kbd {
   font-size: var(--type-body-2-size);
   line-height: var(--type-body-2-lh);
   color: var(--text-default);
-}
-
-/* ---------- 마지막으로 받은 키 ---------- */
-.last-key {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-}
-
-.last-key-combo {
-  align-self: flex-start;
-  color: var(--text-default);
-  padding: var(--space-4) var(--space-12);
-}
-
-.last-key-help {
-  margin-top: var(--space-16);
-}
-
-/* ---------- 타이머 보조 ---------- */
-.timer-minutes {
-  width: var(--space-120);
-}
-
-.timer-actions {
-  align-items: flex-end;
-}
-
-.timer-hint {
-  margin-top: var(--space-12);
 }
 
 /* 제스처 열은 줄바꿈 없이, 설정 열은 남는 폭을 쓴다 */
@@ -974,4 +867,160 @@ kbd {
 
 .agent-actions {
   margin-top: var(--space-12);
+}
+
+/* ---------- 화면 탭 ---------- */
+.view-nav {
+  display: flex;
+  gap: var(--space-2);
+  margin-left: var(--space-16);
+}
+
+.view-tab.is-active {
+  background: var(--bg-brand-weak);
+  color: var(--text-brand);
+}
+
+/* ---------- 홈 ---------- */
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-12);
+  background: var(--bg-brand-weak);
+}
+
+.status-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.status-list li {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.status-item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--text-subtle);
+}
+
+.status-item.is-on {
+  color: var(--text-success);
+}
+
+.profile-create {
+  display: grid;
+  gap: var(--space-8);
+  margin-bottom: var(--space-16);
+}
+
+.profile-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.profile-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: calc(var(--space-48) + var(--space-8)); /* DESIGN.md §4 List row 56px */
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.profile-row:last-child {
+  border-bottom: 0;
+}
+
+.profile-row-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  text-align: left;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-8);
+  padding: var(--space-8);
+  color: var(--text-default);
+  cursor: pointer;
+}
+
+.profile-row.is-active .profile-row-main {
+  background: var(--bg-brand-weak);
+}
+
+.profile-row-actions {
+  display: flex;
+  gap: var(--space-4);
+}
+
+/* ---------- 프로필 설정 ---------- */
+.form-grid {
+  display: grid;
+  gap: var(--space-12);
+}
+
+@media (min-width: 640px) {
+  .form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: var(--space-8);
+  min-height: var(--control-md);
+  cursor: pointer;
+}
+
+.check input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--bg-brand);
+}
+
+.row-actions {
+  display: flex;
+  gap: var(--space-8);
+}
+
+/* ---------- 발표 대기 ---------- */
+.gesture-summary {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 var(--space-16);
+}
+
+.gesture-summary li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-12);
+  padding: var(--space-8) 0;
+  border-bottom: 1px solid var(--border-default);
+}
+
+.gesture-summary li:last-child {
+  border-bottom: 0;
+}
+
+.standby-actions {
+  display: flex;
+  gap: var(--space-8);
+}
+
+.standby.is-presenting {
+  border: 1px solid var(--brand-accent);
 }

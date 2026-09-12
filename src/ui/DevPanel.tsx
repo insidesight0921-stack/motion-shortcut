@@ -25,6 +25,7 @@ const GROUPS: { title: string; keys: Key[] }[] = [
     ],
   },
   { title: '버퍼', keys: ['trajectoryMs'] },
+  { title: '양손', keys: ['xHoldMs', 'twoHandMinScore', 'crossAngleMinDeg', 'crossAngleMaxDeg', 'crossMaxWristDistance'] },
 ];
 
 function fmt(v: number): string {

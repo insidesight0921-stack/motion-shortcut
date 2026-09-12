@@ -7,52 +7,46 @@ import { useGestureStore } from './store/gestureStore';
 import { useLogStore } from './store/logStore';
 import { useModeStore } from './store/modeStore';
 import { useProfileStore } from './store/profileStore';
-import { useUiStore } from './store/uiStore';
+import { useUiStore, type View } from './store/uiStore';
 import { ActivationToggle } from './ui/ActivationToggle';
-import { AgentPanel } from './ui/AgentPanel';
 import { CameraView } from './ui/CameraView';
 import { DevPanel } from './ui/DevPanel';
 import { Effects } from './ui/Effects';
 import { EventLog } from './ui/EventLog';
+import { GestureSettings } from './ui/GestureSettings';
+import { Home } from './ui/Home';
 import { GESTURE_LABEL, Hud } from './ui/Hud';
 import { IconSoundOff, IconSoundOn } from './ui/icons';
-import { MappingEditor } from './ui/MappingEditor';
 import { ModeSwitcher } from './ui/ModeSwitcher';
+import { ProfileSettings } from './ui/ProfileSettings';
 import { useActivationShortcut, useModeShortcuts } from './ui/shortcuts';
-import { useAgent } from './ui/useAgent';
 import { playSound, setMuted, unlockAudio } from './ui/sound';
+import { StandbyScreen } from './ui/StandbyScreen';
+import { useAgent } from './ui/useAgent';
 import { useGestureEngine } from './ui/useGestureEngine';
 import { useVoice } from './ui/useVoice';
-import { VoiceIndicator } from './ui/VoiceIndicator';
 import { VisionSession } from './vision/session';
 
-/** YouTube iframe 등이 포커스를 가지면 단축키가 페이지에 오지 않으므로 명령 실행 후 포커스를 돌려놓는다 */
+const VIEWS: { id: View; label: string }[] = [
+  { id: 'home', label: '홈' },
+  { id: 'profile', label: '프로필' },
+  { id: 'gestures', label: '제스처' },
+  { id: 'standby', label: '발표' },
+];
+
+/** 다른 문서(iframe)가 포커스를 가지면 단축키가 페이지에 오지 않으므로 명령 실행 후 포커스를 돌려놓는다 */
 function blurIframeFocus() {
   const el = document.activeElement;
   if (el instanceof HTMLIFrameElement) el.blur();
-}
-
-function MappingPanel() {
-  const current = useModeStore((s) => s.current);
-  if (!isUserMode(current)) {
-    return (
-      <section className="card" aria-labelledby="mapping-standby-title">
-        <div className="card-head">
-          <h2 id="mapping-standby-title" className="t-title-3">
-            MOTION OFF
-          </h2>
-        </div>
-        <p className="t-body-2 t-subtle reading">{MODES.standby.description}</p>
-      </section>
-    );
-  }
-  return <MappingEditor mode={current} />;
 }
 
 export default function App() {
   const session = useMemo(() => new VisionSession(), []);
   const muted = useGestureStore((s) => s.muted);
   const setMutedState = useGestureStore((s) => s.setMuted);
+  const view = useUiStore((s) => s.view);
+  const setView = useUiStore((s) => s.setView);
+  const fistToggle = useProfileStore((s) => (s.profiles.find((p) => p.id === s.activeProfileId) ?? s.profiles[0]).settings.motionToggle === 'fist');
 
   useActivationShortcut();
   useModeShortcuts();
@@ -72,7 +66,7 @@ export default function App() {
 
   useEffect(() => setMuted(muted), [muted]);
 
-  // 활성화 상태가 바뀌면(제스처·버튼·단축키 어느 경로든) 효과음
+  // 활성화(주먹 옵션) 상태가 바뀌면 효과음
   useEffect(() => {
     let prev = useGestureStore.getState().enabled;
     return useGestureStore.subscribe((s) => {
@@ -107,9 +101,10 @@ export default function App() {
       useLogStore.getState().add({ gesture, result: 'ignored', reason });
     },
     onTwoHand: () => {
-      // 양손 X 유지 → MOTION OFF 토글 (modeStore 가 이미 바뀐 뒤 호출된다). 전환 로그는 useVoice 의 모드 전환 구독이 남긴다
-      const off = useModeStore.getState().current === 'standby';
-      useGestureStore.getState().setEffect({ gestureLabel: '양손 X', label: off ? 'MOTION OFF' : `${MODES[useModeStore.getState().current].labelEn}`, tone: off ? 'off' : 'on', at: performance.now() });
+      // 양손 X 유지 → MOTION OFF 토글 (modeStore 가 이미 바뀐 뒤 호출된다). 전환 로그는 모드 전환 구독이 남긴다
+      const current = useModeStore.getState().current;
+      const off = current === 'standby';
+      useGestureStore.getState().setEffect({ gestureLabel: '양손 X', label: off ? 'MOTION OFF' : MODES[current].labelEn, tone: off ? 'off' : 'on', at: performance.now() });
       playSound(off ? 'toggleOff' : 'toggleOn');
     },
     onExecute: (gesture) => {
@@ -119,8 +114,8 @@ export default function App() {
       const gestureLabel = GESTURE_LABEL[gesture];
 
       if (gesture === 'fist') {
-        // 엔진이 이미 enabled를 뒤집은 뒤 호출된다 (D-015 결정 1)
-        const label = `모션 단축키 ${enabled ? 'ON' : 'OFF'}`;
+        // 엔진이 이미 enabled를 뒤집은 뒤 호출된다 (D-015 결정 1). motionToggle === 'fist' 일 때만 온다
+        const label = `활성화 ${enabled ? 'ON' : 'OFF'}`;
         log.add({ gesture, result: 'executed', command: '활성화 on/off', note: label });
         setEffect({ gestureLabel, label, tone: enabled ? 'on' : 'off', at: performance.now() });
         return;
@@ -157,8 +152,15 @@ export default function App() {
           <div className="topbar-title">
             <h1 className="t-title-2">Flickey</h1>
           </div>
+          <nav className="view-nav" aria-label="화면">
+            {VIEWS.map((v) => (
+              <button key={v.id} type="button" className={`btn btn-ghost btn-sm view-tab ${view === v.id ? 'is-active' : ''}`} aria-current={view === v.id ? 'page' : undefined} onClick={() => setView(v.id)}>
+                {v.label}
+              </button>
+            ))}
+          </nav>
           <div className="topbar-actions">
-            <ActivationToggle />
+            {fistToggle && <ActivationToggle />}
             <button
               type="button"
               className="btn btn-ghost btn-icon"
@@ -173,7 +175,6 @@ export default function App() {
         </div>
         <div className="container topbar-modes">
           <ModeSwitcher />
-          <VoiceIndicator controls={voice} />
         </div>
       </header>
 
@@ -183,8 +184,10 @@ export default function App() {
           <Hud />
         </div>
         <div className="col">
-          <MappingPanel />
-          <AgentPanel controls={agent} />
+          {view === 'home' && <Home />}
+          {view === 'profile' && <ProfileSettings voice={voice} />}
+          {view === 'gestures' && <GestureSettings />}
+          {view === 'standby' && <StandbyScreen agent={agent} />}
         </div>
         <div className="row-full">
           <EventLog />
