@@ -22,6 +22,27 @@ export function SettingsPage({
   } = c;
   return (
     <div className="settings-stack">
+      <ShortcutSettings controller={c} />
+      <section className="control-panel settings-sensitivity">
+        {" "}
+        <SectionTitle index="03" title="포인터 감도" />
+        <label className="range-control">
+          <input
+            type="range"
+            aria-label="포인터 감도"
+            min="0.6"
+            max="2"
+            step="0.01"
+            value={cursorSensitivity}
+            onChange={(event) => {
+              const value = Number(event.target.value);
+              setCursorSensitivity(value);
+              void window.motionAPI?.setCursorSensitivity(value);
+            }}
+          />
+          <strong>{cursorSensitivity.toFixed(2)}×</strong>
+        </label>
+      </section>
       <section className="control-panel settings-permissions">
         {" "}
         <SectionTitle index="SYS" title="권한 점검" />
@@ -44,27 +65,6 @@ export function SettingsPage({
           </button>
         </div>
       </section>
-      <section className="control-panel settings-sensitivity">
-        {" "}
-        <SectionTitle index="03" title="포인터 감도" />
-        <label className="range-control">
-          <input
-            type="range"
-            aria-label="포인터 감도"
-            min="0.6"
-            max="2"
-            step="0.01"
-            value={cursorSensitivity}
-            onChange={(event) => {
-              const value = Number(event.target.value);
-              setCursorSensitivity(value);
-              void window.motionAPI?.setCursorSensitivity(value);
-            }}
-          />
-          <strong>{cursorSensitivity.toFixed(2)}×</strong>
-        </label>
-      </section>
-      <ShortcutSettings controller={c} />
     </div>
   );
 }

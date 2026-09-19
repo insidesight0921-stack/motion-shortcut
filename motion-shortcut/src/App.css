@@ -2491,15 +2491,15 @@
   background: transparent; box-shadow: none; cursor: pointer;
 }
 .presenter-app .range-control input[type="range"]::-webkit-slider-runnable-track {
-  height: 4px; border-radius: 4px; background: #393044;
+  height: 1px; border-radius: 0; background: #393044;
 }
 .presenter-app .range-control input[type="range"]::-webkit-slider-thumb {
   appearance: none; -webkit-appearance: none; width: 14px; height: 14px;
-  margin-top: -5px; border: 0; border-radius: 50%; background: #c5a0ff;
+  margin-top: -6.5px; border: 0; border-radius: 50%; background: #c5a0ff;
   box-shadow: 0 0 10px #a777dc55;
 }
 .presenter-app .range-control input[type="range"]::-moz-range-track {
-  height: 4px; border: 0; border-radius: 4px; background: #393044;
+  height: 1px; border: 0; border-radius: 0; background: #393044;
 }
 .presenter-app .range-control input[type="range"]::-moz-range-thumb {
   width: 14px; height: 14px; border: 0; border-radius: 50%;
@@ -2536,3 +2536,158 @@
 
 .presenter-app .home-console-toolbar { justify-content: flex-end; }
 .presenter-app .home-console-toolbar .camera-controls-group { margin-left: auto; justify-content: flex-end; }
+
+/* Two remaining preparation steps after removing the developer page. */
+.presenter-app .guide-start-steps { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (max-width: 720px) { .presenter-app .guide-start-steps { grid-template-columns: 1fr; } }
+
+/* Align the two guide previews with the full-width lesson panel below. */
+.presenter-app .guide-start { padding-inline: 0; }
+.presenter-app .guide-start > h2 { padding-inline: var(--ui-panel-padding); }
+.presenter-app .guide-start-steps li { display: block; position: relative; min-width: 0; }
+.presenter-app .guide-start-steps li > span { position: absolute; top: 0; left: var(--ui-panel-padding); }
+.presenter-app .guide-start-steps li > div { height: 100%; }
+.presenter-app .guide-start-steps li h3,
+.presenter-app .guide-start-steps li p,
+.presenter-app .guide-start-steps li a { margin-left: calc(var(--ui-panel-padding) + 38px); margin-right: var(--ui-panel-padding); }
+.presenter-app .guide-start-steps .prep-demo { max-width: none; width: 100%; }
+
+/* Use the preview's 16px inset + 1px border as the shared text baseline. */
+.presenter-app .guide-start > h2 { padding-inline: 17px; }
+.presenter-app .guide-start-steps li { display: flex; flex-direction: column; gap: 0; }
+.presenter-app .guide-start-steps li > span { position: static; display: block; margin: 0 17px 12px; }
+.presenter-app .guide-start-steps li > div { height: auto; flex: 1; }
+.presenter-app .guide-start-steps li h3,
+.presenter-app .guide-start-steps li p,
+.presenter-app .guide-start-steps li a { margin-left: 17px; margin-right: 17px; }
+
+/* Settings overlay: keep the presentation mounted behind the native dialog. */
+.presenter-app .settings-modal {
+  position: fixed;
+  inset: 0;
+  width: min(1080px, calc(100vw - 48px));
+  max-width: none;
+  height: min(820px, calc(100dvh - 64px));
+  max-height: none;
+  margin: auto;
+  padding: 0;
+  color: var(--text);
+  background: #121019;
+  color-scheme: dark;
+  border: 1px solid #51435f;
+  border-radius: 18px;
+  box-shadow: 0 24px 90px #0008;
+  overflow: hidden;
+}
+.presenter-app .settings-modal[open] { display: flex; flex-direction: column; transform-origin: center; animation: settings-enter 420ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.settings-modal::backdrop { background: rgb(5 4 10 / 68%); }
+.presenter-app .settings-modal-header { display: flex; align-items: center; justify-content: space-between; gap: 24px; padding: 24px 32px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+.presenter-app .settings-modal-header h2 { margin: 0; font-size: 24px; line-height: 1.3; }
+.presenter-app .settings-modal-header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+.presenter-app .settings-modal-close { width: 44px; height: 44px; padding: 0; flex-shrink: 0; font-size: 20px; }
+.presenter-app .settings-modal-body { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #625271 #121019; padding: 24px 32px 32px; min-height: 0; }
+.presenter-app .settings-modal .settings-stack { width: 100%; max-width: none; margin: 0; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.presenter-app .settings-modal .keyboard-settings { grid-column: 1 / -1; }
+.presenter-app .settings-modal .control-panel { padding: 20px; }
+@keyframes settings-enter { from { opacity: 0; transform: translateY(10px) scale(0.94); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 720px) {
+  .presenter-app .settings-modal { width: calc(100vw - 24px); height: calc(100dvh - 24px); border-radius: 12px; }
+  .presenter-app .settings-modal-header { padding: 20px; }
+  .presenter-app .settings-modal-body { padding: 16px; }
+  .presenter-app .settings-modal .settings-stack { grid-template-columns: 1fr; gap: 16px; }
+}
+@media (prefers-reduced-motion: reduce) { .presenter-app .settings-modal[open] { animation: none; } }
+
+/* Settings belongs to the presentation controls, aligned with the status light. */
+.presenter-app .home-workspace { padding-top: 24px; }
+.presenter-app .console-settings-row {
+  width: min(100%, 1040px);
+  margin-inline: auto;
+  display: flex;
+  justify-content: flex-end;
+  padding-right: calc(var(--ui-panel-padding) + 1px + 6px - 22px);
+}
+.presenter-app .console-settings-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  text-decoration: none;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.presenter-app .console-settings-button svg { width: 24px; height: 24px; }
+.presenter-app .console-settings-button:hover { background: transparent; border-color: transparent; color: var(--text); }
+@media (prefers-reduced-motion: reduce) { .presenter-app .console-settings-button { transition: none; } }
+
+/* Compact settings: all four action rows fit on a standard desktop viewport. */
+.presenter-app .settings-modal { width: min(1000px, calc(100vw - 40px)); height: auto; max-height: calc(100dvh - 40px); }
+.presenter-app .settings-modal-header { padding: 12px 24px; gap: 16px; }
+.presenter-app .settings-modal-header > div { display: flex; align-items: baseline; gap: 16px; }
+.presenter-app .settings-modal-header h2 { font-size: 20px; }
+.presenter-app .settings-modal-header p { margin: 0; font-size: 13px; }
+.presenter-app .settings-modal-close,
+.presenter-app .settings-modal-close:hover:not(:disabled) { background: transparent; border-color: transparent; box-shadow: none; transform: none; }
+.presenter-app .settings-modal-close { color: var(--muted); }
+.presenter-app .settings-modal-close:hover:not(:disabled) { color: var(--text); }
+.presenter-app .settings-modal-body { padding: 16px 24px 20px; }
+.presenter-app .settings-modal .settings-stack { gap: 16px 24px; }
+.presenter-app .settings-modal .control-panel { padding: 0 0 14px; }
+.presenter-app .settings-modal .keyboard-settings { padding-bottom: 0; }
+.presenter-app .settings-modal .control-panel h2 { font-size: 16px; line-height: 1.4; }
+.presenter-app .settings-modal .control-panel p { margin: 8px 0 0; font-size: 13px; line-height: 1.5; }
+.presenter-app .settings-modal .permission-list { margin-top: 10px; gap: 8px; }
+.presenter-app .settings-modal .range-control { margin-top: 14px; }
+.presenter-app .settings-modal .input-customization-scroll { margin-top: 12px; }
+.presenter-app .settings-modal .input-customization-table :is(th, td) { padding: 8px 12px; font-size: 13px; }
+.presenter-app .settings-modal .input-customization-table thead th { padding-block: 9px; font-size: 12px; }
+.presenter-app .settings-modal .motion-select-field select,
+.presenter-app .settings-modal .custom-key-controls button,
+.presenter-app .settings-modal .permission-list button { min-height: 40px; height: 40px; padding-block: 7px; font-size: 13px; }
+@media (max-width: 720px) {
+  .presenter-app .settings-modal { width: calc(100vw - 24px); max-height: calc(100dvh - 24px); }
+  .presenter-app .settings-modal-header { padding: 10px 16px; }
+  .presenter-app .settings-modal-header > div { display: block; }
+  .presenter-app .settings-modal-header p { margin-top: 4px; }
+  .presenter-app .settings-modal-body { padding: 16px; }
+}
+
+/* Read settings in one sequence: permission, sensitivity, customization. */
+.presenter-app .settings-modal .settings-stack { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.presenter-app .settings-modal .settings-permissions .permission-list { max-width: 620px; }
+.presenter-app .settings-modal .settings-sensitivity { display: grid; grid-template-columns: 140px minmax(0, 1fr); align-items: center; gap: 16px; }
+.presenter-app .settings-modal .settings-sensitivity .range-control { margin: 0; max-width: none; }
+@media (max-width: 720px) {
+  .presenter-app .settings-modal .settings-sensitivity { grid-template-columns: minmax(0, 1fr); gap: 10px; }
+}
+
+/* Give each settings group breathing room without enlarging its controls. */
+.presenter-app .settings-modal-body { padding: 24px 32px 28px; }
+.presenter-app .settings-modal .settings-stack { gap: 24px; }
+.presenter-app .settings-modal .settings-sensitivity { padding-bottom: 22px; }
+.presenter-app .settings-modal .keyboard-settings { padding-bottom: 22px; border-bottom: 1px solid var(--line); }
+.presenter-app .settings-modal .settings-permissions { padding-bottom: 0; border-bottom: 0; }
+.presenter-app .settings-modal .control-panel p { margin-top: 12px; }
+.presenter-app .settings-modal .input-customization-scroll { margin-top: 18px; }
+.presenter-app .settings-modal .input-customization-table :is(th, td) { padding-block: 12px; }
+.presenter-app .settings-modal .permission-list { margin-top: 16px; }
+@media (max-height: 760px) and (min-width: 721px) {
+  .presenter-app .settings-modal-body { padding-block: 18px; }
+  .presenter-app .settings-modal .settings-stack { gap: 18px; }
+  .presenter-app .settings-modal .settings-sensitivity,
+  .presenter-app .settings-modal .keyboard-settings { padding-bottom: 16px; }
+  .presenter-app .settings-modal .input-customization-table :is(th, td) { padding-block: 9px; }
+}
+@media (max-width: 720px) {
+  .presenter-app .settings-modal-body { padding: 20px; }
+}
+
+/* Keep visible breathing room above and below the settings dialog. */
+.presenter-app .settings-modal { max-height: 86dvh; }
+@media (max-width: 720px) {
+  .presenter-app .settings-modal { max-height: 90dvh; }
+}

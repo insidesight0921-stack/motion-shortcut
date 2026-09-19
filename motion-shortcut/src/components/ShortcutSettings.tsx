@@ -28,8 +28,8 @@ export function ShortcutSettings({
     >
       <h2 id="keyboard-settings-title">모션 · 키보드 커스텀</h2>
       <p>
-        기능별 모션과 키보드를 나란히 설정하세요. 모션 선택은 UI 미리보기이며,
-        키보드 실행 기능은 추후 연결됩니다.
+        각 발표 기능에 사용할 손동작과 단축키를 설정하세요.
+        발표 중 편한 입력 방식으로 제어할 수 있습니다.
       </p>
       <div
         className="input-customization-scroll"
@@ -159,7 +159,7 @@ export function ShortcutSettings({
                       </button>
                       <button
                         className="button-quiet"
-                        aria-label={`${ACTION_LABELS[action]} 기본키 복원`}
+                        aria-label={`${ACTION_LABELS[action]} 기본키 초기화`}
                         disabled={!c.profile.shortcuts[action]}
                         onClick={() => {
                           const defaultKey = DEFAULT_KEYS[action];
@@ -181,10 +181,10 @@ export function ShortcutSettings({
                           const shortcuts = { ...c.profile.shortcuts };
                           delete shortcuts[action];
                           c.updateProfile({ ...c.profile, shortcuts });
-                          setMessage("기본키로 복원했습니다.");
+                          setMessage("단축키를 기본값으로 초기화했습니다.");
                         }}
                       >
-                        복원
+                        초기화
                       </button>
                     </div>
                   </td>

@@ -32,6 +32,14 @@ export function HomePage({
           : "카메라 꺼짐";
   return (
     <div className="home-workspace">
+      <div className="console-settings-row">
+        <a href="#/settings" className="console-settings-button" aria-label="설정" aria-haspopup="dialog" title="설정">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m9 3 .5-2h5L15 3l2 1 2-.5 2.5 4-1.5 1.5v3l1.5 1.5-2.5 4-2-.5-2 1-.5 2h-5L9 18l-2-1-2 .5-2.5-4L4 12V9L2.5 7.5l2.5-4L7 4Z" transform="translate(0 1.5)" />
+            <circle cx="12" cy="12" r="3.2" />
+          </svg>
+        </a>
+      </div>
       <section
         className="camera-console home-console"
         aria-labelledby="control-center-title"

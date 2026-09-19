@@ -6,12 +6,10 @@ import { usePresentationController } from "./features/presentation/usePresentati
 import { HomePage } from "./pages/HomePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { GuidePage } from "./pages/GuidePage";
-import { DeveloperPage } from "./pages/DeveloperPage";
 const pages = {
   home: ["홈", "발표 준비와 실시간 제어"],
   settings: ["설정", "권한과 입력 설정"],
   guide: ["가이드", "사용법과 기능 설명"],
-  developer: ["개발", "웹 실행 상태와 구현 현황"],
   privacy: ["개인정보 안내", "정식 공개 전 검토가 필요한 초안입니다."],
 } as const;
 type Page = keyof typeof pages;
@@ -21,7 +19,6 @@ const navigationPaths: Record<Exclude<Page, "privacy">, string> = {
     "m9 3 .5-2h5L15 3l2 1 2-.5 2.5 4-1.5 1.5v3l1.5 1.5-2.5 4-2-.5-2 1-.5 2h-5L9 18l-2-1-2 .5-2.5-4L4 12V9L2.5 7.5l2.5-4L7 4Z",
   guide:
     "M12 5v16M12 5C9 3 5 3 2 4v15c3-1 7-1 10 2 3-3 7-3 10-2V4c-3-1-7-1-10 1Z",
-  developer: "m7 6-6 6 6 6m10-12 6 6-6 6M14 4l-4 16",
 };
 function readPage(): Page {
   const value = window.location.hash.replace("#/", "");
@@ -32,18 +29,42 @@ export default function App() {
   const [introVisible, setIntroVisible] = useState(
     () => !!window.matchMedia && !window.matchMedia("(prefers-reduced-motion: reduce)").matches,
   );
-  useSmoothWheel(!introVisible);
+  const [settingsOpen, setSettingsOpen] = useState(() => readPage() === "settings");
+  useSmoothWheel(!introVisible && !settingsOpen);
   const finishIntro = useCallback(() => {
     const restoreFocus = document.activeElement?.closest(".welcome-intro");
     setIntroVisible(false);
     if (restoreFocus) requestAnimationFrame(() => heading.current?.focus());
   }, []);
-  const [page, setPage] = useState<Page>(readPage);
+  const [page, setPage] = useState<Page>(() => readPage() === "settings" ? "home" : readPage());
   const heading = useRef<HTMLHeadingElement>(null);
+  const settingsDialog = useRef<HTMLDialogElement>(null);
+  const closeSettings = useCallback(() => {
+    setSettingsOpen(false);
+    window.history.replaceState(null, "", `#/${page}`);
+  }, [page]);
+  useEffect(() => {
+    if (!settingsOpen || introVisible) return;
+    const dialog = settingsDialog.current;
+    if (!dialog) return;
+    const trigger = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const overflow = document.documentElement.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    dialog.showModal();
+    return () => {
+      dialog.close();
+      document.documentElement.style.overflow = overflow;
+      trigger?.focus({ preventScroll: true });
+    };
+  }, [settingsOpen, introVisible]);
   useEffect(() => {
     const change = () => {
-      setPage(readPage());
-      requestAnimationFrame(() => heading.current?.focus());
+      const next = readPage();
+      setSettingsOpen(next === "settings");
+      if (next !== "settings") {
+        setPage(next);
+        requestAnimationFrame(() => heading.current?.focus());
+      }
     };
     window.addEventListener("hashchange", change);
     return () => window.removeEventListener("hashchange", change);
@@ -68,13 +89,14 @@ export default function App() {
         </a>
         <nav className="page-nav" aria-label="주 메뉴">
           {Object.entries(pages)
-            .filter(([id]) => id !== "privacy")
+            .filter(([id]) => id !== "privacy" && id !== "settings")
             .map(([id, [label]]) => (
               <a
                 key={id}
                 href={`#/${id}`}
                 aria-label={label}
-                aria-current={page === id ? "page" : undefined}
+                aria-current={!settingsOpen && page === id ? "page" : undefined}
+                aria-haspopup={id === "settings" ? "dialog" : undefined}
               >
                 <svg
                   viewBox="0 0 24 24"
@@ -119,9 +141,8 @@ export default function App() {
         >
           <HomePage controller={c} />
         </div>
-        {page === "settings" && <SettingsPage controller={c} />}
+
         {page === "guide" && <GuidePage />}
-        {page === "developer" && <DeveloperPage controller={c} />}
         {page === "privacy" && (
           <section
             className="control-panel footer-privacy"
@@ -174,13 +195,29 @@ export default function App() {
           </section>
         )}
       </main>
+      <dialog
+        ref={settingsDialog}
+        className="settings-modal"
+        aria-labelledby="settings-modal-title"
+        onCancel={(event) => { event.preventDefault(); closeSettings(); }}
+      >
+        <header className="settings-modal-header">
+          <div>
+            <h2 id="settings-modal-title">설정</h2>
+          </div>
+          <button type="button" className="settings-modal-close" onClick={closeSettings} aria-label="설정 닫기" autoFocus>✕</button>
+        </header>
+        <div className="settings-modal-body" data-lenis-prevent>
+          <SettingsPage controller={c} />
+        </div>
+      </dialog>
       <footer className="site-footer">
         <div className="site-footer-main">
           <div className="site-footer-brand">
             <a href="#/home" aria-label="Adam 홈으로 이동">
               <img src="./assets/adam-header-stacked-02.png" alt="Adam" />
             </a>
-            <p>손동작으로 이어가는 자연스러운 발표.</p>
+            <p>ADAM · 손끝으로 설계하는 발표의 흐름</p>
           </div>
           <div className="site-footer-contact">
             <span>TEAM / CONTACT</span>

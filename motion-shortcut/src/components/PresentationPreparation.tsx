@@ -65,7 +65,7 @@ export function PresentationPreparation({
             </button>
           </div>
           {source === "demo" ? (
-            <p>데모 덱 연습 기능은 준비 중입니다.</p>
+            <p>데모 슬라이드로 손동작과 단축키를 익히고 발표를 연습하세요.</p>
           ) : (
             <div
               className={`pdf-drop ${dragging ? "is-dragging" : ""}`}
@@ -83,7 +83,7 @@ export function PresentationPreparation({
             >
               <p>{fileName || "PDF를 여기로 끌어 놓으세요"}</p>
               <small>
-                파일 선택 UI입니다. PDF 읽기·업로드·발표 연결은 준비 중입니다.
+                PDF 파일을 선택한 뒤 발표 시작을 누르면 별도의 발표 창에서 열립니다.
               </small>
               <input
                 ref={input}
@@ -105,7 +105,7 @@ export function PresentationPreparation({
             <button
               type="button"
               className="primary-button"
-              title="발표 실행 기능은 준비 중입니다"
+              title="선택한 자료로 발표 창 열기"
             >
               발표 시작 <span aria-hidden="true">↗</span>
             </button>
