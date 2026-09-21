@@ -1,4 +1,10 @@
 import { useEffect, useRef } from "react";
+import { VIEWBOX } from "./tutorialViewBox";
+
+// Constraint: <ArticulatedHand> is an HTML <canvas>, not SVG. Render it inside the
+// .tutorial-hands overlay that sits on top of the <svg>, never inside the <svg>
+// (WebKit mishandles <foreignObject>). x/y/scale are in VIEWBOX units, so group
+// transforms must be baked into them at the call site. See docs/DECISIONS.md.
 
 type V = [number, number, number];
 type Face = { points: V[]; normal: V; normals?: V[]; nail?: boolean };
@@ -401,6 +407,7 @@ export function ArticulatedHand({
   left = false,
   backFacing = false,
   edgeOn = false,
+  opacity = 1,
 }: {
   pose: number[];
   x: number;
@@ -410,30 +417,30 @@ export function ArticulatedHand({
   left?: boolean;
   backFacing?: boolean;
   edgeOn?: boolean;
+  opacity?: number;
 }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     if (ref.current) paint(ref.current, pose, backFacing, edgeOn);
   }, [pose, backFacing, edgeOn]);
+  // Positioned in percentages of the 800×310 overlay so it tracks the <svg> at any size.
   return (
-    <g
-      transform={`translate(${x} ${y}) rotate(${angle}) scale(${left ? -scale : scale} ${scale})`}
-    >
-      <foreignObject
-        x="-110"
-        y="-140"
-        width="220"
-        height="250"
-        pointerEvents="none"
-      >
-        <canvas
-          ref={ref}
-          width="440"
-          height="500"
-          style={{ width: 220, height: 250, display: "block" }}
-          aria-hidden="true"
-        />
-      </foreignObject>
-    </g>
+    <canvas
+      ref={ref}
+      className="tutorial-hand"
+      width="440"
+      height="500"
+      style={{
+        left: `${(x / VIEWBOX.w) * 100}%`,
+        top: `${(y / VIEWBOX.h) * 100}%`,
+        width: `${((220 * scale) / VIEWBOX.w) * 100}%`,
+        aspectRatio: "220 / 250",
+        // (110, 140) of the 220×250 box is the anchor placed at (x, y) and the pivot.
+        transform: `translate(-50%, -56%) rotate(${angle}deg) scaleX(${left ? -1 : 1})`,
+        transformOrigin: "50% 56%",
+        opacity,
+      }}
+      aria-hidden="true"
+    />
   );
 }
