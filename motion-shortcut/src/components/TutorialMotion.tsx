@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ArticulatedHand as Hand } from "./ArticulatedHand";
+import { VIEWBOX } from "./tutorialViewBox";
 
 const smooth = (v: number) => {
   const t = Math.max(0, Math.min(1, v));
@@ -118,20 +119,17 @@ export function TutorialMotion({ slide }: { slide: number }) {
   ];
   return (
     <div className="tutorial-motion">
-      <svg viewBox="0 0 800 310" role="img" aria-label={labels[slide - 1]}>
+      <svg
+        viewBox={`0 0 ${VIEWBOX.w} ${VIEWBOX.h}`}
+        role="img"
+        aria-label={labels[slide - 1]}
+      >
         {slide === 1 && (
           <>
             <path
               d="M200 140 H270 M200 140 l14 -12 M200 140 l14 12 M530 140 H600 M600 140 l-14 -12 M600 140 l-14 12"
               stroke="#ad8ccc"
               fill="none"
-            />
-            <Hand
-              pose={[0, 0.025, 0.035, 0.045, 0.055]}
-              x={320 + swipe * 160}
-              y={165}
-              angle={8}
-              edgeOn
             />
             <text x="215" y="280">
               이전
@@ -144,9 +142,6 @@ export function TutorialMotion({ slide }: { slide: number }) {
         {slide === 2 && (
           <>
             <Laptop lit={!screenHidden} />
-            <g opacity={palmOpacity}>
-              <Hand pose={open} x={180} y={190} scale={0.8} />
-            </g>
             <text x="400" y="282" textAnchor="middle">
               {t < 0.22 ? "손바닥 유지 · 화면 가리기"
                 : t < 0.32 ? "화면이 가려졌습니다"
@@ -160,68 +155,88 @@ export function TutorialMotion({ slide }: { slide: number }) {
           <>
             <g transform="translate(-110 0) scale(.85)">
               <Laptop lit pointer={t > 0.38} click={t > 0.68 && t < 0.82} />
-              <Hand
-                pose={blend(lPose, index, smooth((t - 0.44) / 0.12))}
-                x={545}
-                y={265}
-                scale={0.55}
-                backFacing
-                left
-              />
-              <g opacity={smooth((t - 0.56) / 0.04)}>
-                <Hand
-                  pose={blend(
-                    open,
-                    fist,
-                    smooth((t - 0.6) / 0.08) * (1 - smooth((t - 0.82) / 0.12)),
-                  )}
-                  x={260}
-                  y={265}
-                  scale={0.55}
-                  backFacing
-                />
-              </g>
             </g>
             <path d="M470 28 V275" stroke="#584363" />
-            <Hand
-              pose={blend(fist, three, close)}
-              x={635}
-              y={170}
-              scale={0.85}
-            />
             <text x="625" y="280" textAnchor="middle">
               슬라이드 모드
             </text>
           </>
         )}
         {slide === 4 && (
+          <text x="400" y="285" textAnchor="middle">
+            {t < 0.52 ? "양손 주먹 · 모션 정지" : "엄지 + 새끼손가락 · 재개"}
+          </text>
+        )}
+      </svg>
+      {/* Hands are HTML canvases layered over the svg (no foreignObject — WebKit
+          mispositions and stops repainting it); x/y/scale are viewBox units. */}
+      <div className="tutorial-hands" aria-hidden="true">
+        {slide === 1 && (
+          <Hand
+            pose={[0, 0.025, 0.035, 0.045, 0.055]}
+            x={320 + swipe * 160}
+            y={165}
+            angle={8}
+            edgeOn
+          />
+        )}
+        {slide === 2 && (
+          <Hand pose={open} x={180} y={190} scale={0.8} opacity={palmOpacity} />
+        )}
+        {slide === 3 && (
           <>
-            <g opacity={1 - resume * 0.85}>
-              <Hand
-                pose={blend(open, fist, close)}
-                x={290}
-                y={170}
-                scale={0.85}
-                left
-              />
-            </g>
+            {/* The laptop group's translate(-110 0) scale(.85) is applied to
+                these two hands' coordinates directly. */}
+            <Hand
+              pose={blend(lPose, index, smooth((t - 0.44) / 0.12))}
+              x={-110 + 545 * 0.85}
+              y={265 * 0.85}
+              scale={0.55 * 0.85}
+              backFacing
+              left
+            />
+            <Hand
+              pose={blend(
+                open,
+                fist,
+                smooth((t - 0.6) / 0.08) * (1 - smooth((t - 0.82) / 0.12)),
+              )}
+              x={-110 + 260 * 0.85}
+              y={265 * 0.85}
+              scale={0.55 * 0.85}
+              backFacing
+              opacity={smooth((t - 0.56) / 0.04)}
+            />
+            <Hand
+              pose={blend(fist, three, close)}
+              x={635}
+              y={170}
+              scale={0.85}
+            />
+          </>
+        )}
+        {slide === 4 && (
+          <>
+            <Hand
+              pose={blend(open, fist, close)}
+              x={290}
+              y={170}
+              scale={0.85}
+              left
+              opacity={1 - resume * 0.85}
+            />
             <Hand
               pose={blend(blend(open, fist, close), phone, resume)}
               x={500}
               y={170}
               scale={0.85}
             />
-            <text x="400" y="285" textAnchor="middle">
-              {t < 0.52 ? "양손 주먹 · 모션 정지" : "엄지 + 새끼손가락 · 재개"}
-            </text>
           </>
         )}
         {slide === 5 && (
-          <>
-            <Hand pose={blend(open, fist, close)} x={400} y={150} scale={1.2} />
-          </>
+          <Hand pose={blend(open, fist, close)} x={400} y={150} scale={1.2} />
         )}
-      </svg>
+      </div>
     </div>
   );
 }
