@@ -1,5 +1,6 @@
 import { lazy, Suspense, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import { Analytics } from "@vercel/analytics/react";
 import "./index.css";
 import App from "./App.tsx";
 import Overlay from "./Overlay.tsx";
@@ -16,6 +17,8 @@ const isLaser = params.has("laser");
 if (isOverlay) document.documentElement.classList.add("overlay-page");
 if (isKeyboard) document.documentElement.classList.add("keyboard-page");
 if (isLaser) document.documentElement.classList.add("laser-page");
+// Web analytics only on the deployed web app (not Electron windows); the package skips dev mode itself.
+const trackVisits = !window.motionAPI && !isOverlay && !isKeyboard && !isLaser;
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
@@ -28,5 +31,6 @@ createRoot(document.getElementById("root")!).render(
     ) : (
       <App />
     )}
+    {trackVisits && <Analytics />}
   </StrictMode>,
 );
