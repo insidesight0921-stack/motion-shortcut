@@ -1,3 +1,4 @@
+import { acquireCamera } from "../camera/sharedCamera";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useHandTracking,
@@ -76,6 +77,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const petCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const releaseCameraRef = useRef<(() => void) | null>(null);
   const cameraRequestRef = useRef(0);
   const requestingRef = useRef(false);
 
@@ -138,29 +140,20 @@ export function usePresentationController(target: "external" | "demo" = "externa
     setCameraState("requesting");
     setCameraError("");
     try {
-      if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error(
-          "카메라는 HTTPS 또는 localhost 환경에서 지원되는 브라우저로 실행하세요.",
-        );
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      const lease = await acquireCamera();
+      const { stream } = lease;
       if (request !== cameraRequestRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
+        lease.release();
         return false;
       }
       streamRef.current = stream;
+      releaseCameraRef.current = lease.release;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       if (request !== cameraRequestRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
+        lease.release();
         return false;
       }
       setCameraState("active");
@@ -170,13 +163,13 @@ export function usePresentationController(target: "external" | "demo" = "externa
       return true;
     } catch (error) {
       if (request !== cameraRequestRef.current) return false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      releaseCameraRef.current?.();
       streamRef.current = null;
       const message =
         error instanceof DOMException && error.name === "NotAllowedError"
           ? isDesktop
             ? "시스템 설정에서 실행 중인 앱의 카메라 권한을 허용하세요."
-            : "브라우저의 사이트 설정에서 카메라 권한을 허용하세요."
+            : "브라우저의 사이트 설정에서 카메라 권한을 허용한 뒤 발표 시작을 다시 누르세요."
           : error instanceof Error
             ? error.message
             : "카메라를 연결하지 못했습니다.";
@@ -196,7 +189,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
 
   const stopCamera = async () => {
     cameraRequestRef.current += 1;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    releaseCameraRef.current?.();
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraState("idle");
@@ -228,6 +221,10 @@ export function usePresentationController(target: "external" | "demo" = "externa
       addLog("모션 OFF");
       return;
     }
+    await startMotion();
+  };
+
+  const startMotion = async () => {
     const cameraReady = await startCamera();
     if (!cameraReady) return;
     const enabled = api
@@ -369,7 +366,10 @@ export function usePresentationController(target: "external" | "demo" = "externa
         const result = await navigator.permissions.query({
           name: "camera" as PermissionName,
         });
-        camera = result.state === "prompt" ? "not-determined" : result.state;
+        // Camera startup may complete while the permission query is pending.
+        camera = streamRef.current
+          ? "granted"
+          : result.state === "prompt" ? "not-determined" : result.state;
       } catch {
         /* Some browsers cannot query camera permission; do not invent a denial. */
       }
@@ -417,11 +417,8 @@ export function usePresentationController(target: "external" | "demo" = "externa
           await refreshSystemStatus();
           return;
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-        stream.getTracks().forEach((track) => track.stop());
+        const lease = await acquireCamera();
+        lease.release();
       }
       await refreshSystemStatus();
     } catch {
@@ -493,7 +490,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
     subscriptions.push(
       api?.onCameraChanged((enabled) => {
         if (enabled) return;
-        streamRef.current?.getTracks().forEach((track) => track.stop());
+        releaseCameraRef.current?.();
         streamRef.current = null;
         if (videoRef.current) videoRef.current.srcObject = null;
         setCameraState("idle");
@@ -542,7 +539,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
   useEffect(
     () => () => {
       cameraRequestRef.current += 1;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      releaseCameraRef.current?.();
     },
     [],
   );
@@ -554,8 +551,13 @@ export function usePresentationController(target: "external" | "demo" = "externa
     cameraState === "active",
     "#b794ff",
     handleGesture,
-    (nextMode) => {
-      if (!pointerTestRef.current && motionOn && mode !== nextMode) void setPresentationMode(nextMode);
+    async (nextMode) => {
+      if (pointerTestRef.current || cameraState !== "active") return;
+      // A completed slide-return pose also explicitly resumes paused motion.
+      // Other mode poses must not cancel an emergency stop.
+      if (!motionOn && nextMode !== "slide") return;
+      if (mode !== nextMode) await setPresentationMode(nextMode);
+      if (!motionOn && nextMode === "slide") await startMotion();
     },
     (point) => {
       if (pointerTestRef.current) { setTestPointer(point); return; }
@@ -591,6 +593,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
       addLog("양손 주먹 · 긴급 정지");
     },
     (frame) => api?.sendHandOverlayFrame?.(frame),
+    FIXED_ACTIONS.map((action) => profile.mappings[action]),
   );
   const activeTracking = tracking;
   const selectedResource = profile.resources.filter((item) => item.value)[
@@ -638,6 +641,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
     startCamera,
     stopCamera,
     toggleMotion,
+    startMotion,
     executeAction,
     openResource,
     addResource,

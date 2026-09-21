@@ -63,3 +63,13 @@ it("restores custom motions and keys when the page is mounted again", async () =
   expect(screen.getByRole("combobox", { name: "이전 슬라이드 모션 선택" })).toHaveValue("swipe-right");
   expect(screen.getByRole("button", { name: "다음 슬라이드 키 지정" })).toHaveTextContent("K");
 });
+
+it.each(["thumbs-up", "thumbs-down", "ok", "three-fingers", "point-left", "point-right", "point-up"])("allows assigning and restoring %s", async (gesture) => {
+  const page = render(<Settings />);
+  const next = screen.getByRole("combobox", { name: "다음 슬라이드 모션 선택" });
+  await userEvent.selectOptions(next, gesture);
+  expect(loadProfile().mappings["next-slide"]).toBe(gesture);
+  page.unmount();
+  render(<Settings />);
+  expect(screen.getByRole("combobox", { name: "다음 슬라이드 모션 선택" })).toHaveValue(gesture);
+});

@@ -1,5 +1,6 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
+import type { GesturePattern } from "./types";
 import { usePresentationController } from "./usePresentationController";
 const tracking = vi.hoisted(() => ({ args: [] as unknown[] }));
 vi.mock("../camera/useHandTracking", () => ({
@@ -58,6 +59,70 @@ describe("web and desktop runtime boundaries", () => {
     await act(async () => { await result.current.stopCamera(); });
     expect(stop).toHaveBeenCalled();
     expect(native).not.toHaveBeenCalled();
+  });
+  it.each<GesturePattern>(["thumbs-up", "thumbs-down", "ok", "three-fingers", "point-left", "point-right", "point-up"])("dispatches a custom %s to its assigned slide action", async (gesture) => {
+    const { result } = renderHook(() => usePresentationController("demo"));
+    act(() => result.current.updateProfile({
+      ...result.current.profile,
+      mappings: { ...result.current.profile.mappings, "next-slide": gesture },
+    }));
+    expect(tracking.args[12]).toContain(gesture);
+    await act(async () => { await result.current.startMotion(); });
+    await act(async () => { (tracking.args[5] as (g: string) => void)(gesture); });
+    expect(result.current.rehearsalSlide).toBe(2);
+    await act(async () => { await result.current.toggleMotion(); });
+    await act(async () => { (tracking.args[5] as (g: string) => void)(gesture); });
+    expect(result.current.rehearsalSlide).toBe(2);
+  });
+  it("resumes slide commands after returning from pointer mode", async () => {
+    const { result } = renderHook(() => usePresentationController("demo"));
+    await act(async () => { await result.current.startMotion(); });
+    await act(async () => { (tracking.args[6] as (mode: string) => void)("cursor"); });
+    expect(result.current.mode).toBe("cursor");
+    await act(async () => { (tracking.args[5] as (gesture: string) => void)("swipe-right"); });
+    expect(result.current.rehearsalSlide).toBe(1);
+    await act(async () => { (tracking.args[6] as (mode: string) => void)("slide"); });
+    expect(result.current.mode).toBe("slide");
+    await act(async () => { (tracking.args[5] as (gesture: string) => void)("swipe-right"); });
+    expect(result.current.rehearsalSlide).toBe(2);
+  });
+  it.each(["slide", "cursor"] as const)("resumes paused motion with the slide-return pose from %s", async (initialMode) => {
+    const { result } = renderHook(() => usePresentationController("demo"));
+    await act(async () => { await result.current.startMotion(); });
+    await act(async () => { await result.current.setPresentationMode(initialMode); });
+    act(() => { (tracking.args[10] as () => void)(); });
+    expect(result.current.motionOn).toBe(false);
+    expect(result.current.cameraState).toBe("active");
+    await act(async () => { await (tracking.args[6] as (mode: string) => Promise<void>)("cursor"); });
+    expect(result.current.motionOn).toBe(false);
+    await act(async () => { await (tracking.args[6] as (mode: string) => Promise<void>)("slide"); });
+    expect(result.current.mode).toBe("slide");
+    expect(result.current.motionOn).toBe(true);
+    await act(async () => { (tracking.args[5] as (gesture: string) => void)("swipe-right"); });
+    expect(result.current.rehearsalSlide).toBe(2);
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  });
+  it("shares the camera between control center and presentation without stopping the other consumer", async () => {
+    const stop = vi.fn();
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({ getTracks: () => [{ stop }] } as unknown as MediaStream);
+    const center = renderHook(() => usePresentationController());
+    const popup = renderHook(() => usePresentationController("demo"));
+    await act(async () => {
+      await Promise.all([center.result.current.startCamera(), popup.result.current.startMotion()]);
+    });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    expect(center.result.current.permissions.camera).toBe("granted");
+    expect(popup.result.current.permissions.camera).toBe("granted");
+    expect(popup.result.current.motionOn).toBe(true);
+    await act(async () => { await center.result.current.stopCamera(); });
+    expect(stop).not.toHaveBeenCalled();
+    expect(popup.result.current.cameraState).toBe("active");
+    await act(async () => { await center.result.current.startCamera(); });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    popup.unmount();
+    expect(stop).not.toHaveBeenCalled();
+    center.unmount();
+    expect(stop).toHaveBeenCalledTimes(1);
   });
   it("stops a pending camera request when the home camera is handed off", async () => {
     let resolve!: (stream: MediaStream) => void;
@@ -212,6 +277,28 @@ describe("web and desktop runtime boundaries", () => {
     await waitFor(() =>
       expect(result.current.permissions.camera).toBe("denied"),
     );
+  });
+  it("keeps camera permission granted when a pending permission refresh resolves after camera startup", async () => {
+    let resolvePermission!: (status: PermissionStatus) => void;
+    const pendingPermission = new Promise<PermissionStatus>((resolve) => {
+      resolvePermission = resolve;
+    });
+    vi.mocked(navigator.permissions.query).mockReturnValue(pendingPermission);
+    const { result } = renderHook(usePresentationController);
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = result.current.refreshSystemStatus();
+    });
+    await act(async () => {
+      await result.current.startCamera();
+    });
+    expect(result.current.permissions.camera).toBe("granted");
+    await act(async () => {
+      resolvePermission({ state: "prompt" } as PermissionStatus);
+      await refresh;
+    });
+    expect(result.current.cameraState).toBe("active");
+    expect(result.current.permissions.camera).toBe("granted");
   });
   it("desktop refresh still updates permissions when display enumeration fails", async () => {
     const getPermissions = vi.fn().mockResolvedValue({

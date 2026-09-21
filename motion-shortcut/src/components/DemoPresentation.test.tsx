@@ -1,18 +1,34 @@
-import { fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import { StrictMode } from "react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { DemoPresentation } from "./DemoPresentation";
 import { PresentationPreparation } from "./PresentationPreparation";
 import { usePresentationController } from "../features/presentation/usePresentationController";
-vi.mock("../features/camera/useHandTracking", () => ({ useHandTracking: () => ({ state: "idle", errorMessage: "" }) }));
+const tracking = vi.hoisted(() => ({
+  state: "tracking",
+  gesture: (() => {}) as (gesture: string) => void,
+  stop: () => {},
+  mode: (async () => {}) as (mode: string) => Promise<void>,
+}));
+vi.mock("../features/camera/useHandTracking", () => ({ useHandTracking: (...args: unknown[]) => {
+  tracking.gesture = args[5] as (gesture: string) => void;
+  tracking.stop = args[10] as () => void;
+  tracking.mode = args[6] as (mode: string) => Promise<void>;
+  return { state: tracking.state, errorMessage: "" };
+} }));
 vi.mock("./PdfPage", () => ({ PdfPage: ({ pageNumber }: { pageNumber: number }) => <div>PDF page {pageNumber}</div> }));
-beforeEach(() => { localStorage.clear(); delete window.motionAPI; });
+beforeEach(() => {
+  localStorage.clear(); delete window.motionAPI; tracking.state = "tracking";
+  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop: vi.fn() }] }) } });
+  vi.spyOn(HTMLMediaElement.prototype, "play").mockResolvedValue(undefined);
+});
 afterEach(() => vi.restoreAllMocks());
 function Preparation() { return <PresentationPreparation controller={usePresentationController()} />; }
 it("opens one named demo window and focuses an existing popup", async () => {
   const focus = vi.fn();
-  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus } as unknown as Window);
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus, postMessage: vi.fn() } as unknown as Window);
   render(<Preparation />);
   await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
   expect(open).toHaveBeenCalledWith(expect.stringContaining("?demo"), "adam-demo-presentation", expect.stringContaining("popup"));
@@ -27,6 +43,66 @@ it("explains popup blocking and keeps PDF presentation disabled", async () => {
   expect(screen.getByRole("alert")).toHaveTextContent("팝업을 허용");
   await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
   expect(screen.getByRole("button", { name: "발표 시작" })).toBeDisabled();
+});
+it.each([false, true])("waits for camera permission before opening a presentation (PDF: %s)", async (isPdf) => {
+  let resolveCamera!: (stream: MediaStream) => void;
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(new Promise((resolve) => { resolveCamera = resolve; }));
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  const create = vi.fn().mockReturnValue("blob:test");
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
+  render(<Preparation />);
+  if (isPdf) {
+    await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
+    await userEvent.upload(screen.getByLabelText("발표 PDF 파일 선택"), new File(["%PDF"], "slides.pdf", { type: "application/pdf" }));
+  }
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  const pending = screen.getByRole("button", { name: "카메라 확인 중…" });
+  expect(pending).toBeDisabled();
+  await userEvent.click(pending);
+  expect(open).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  await act(async () => { resolveCamera({ getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream); });
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(open.mock.calls[0][1]).toBe(isPdf ? "adam-pdf-presentation" : "adam-demo-presentation");
+});
+it.each([false, true])("keeps the popup closed after camera denial and allows a successful retry (PDF: %s)", async (isPdf) => {
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  const create = vi.fn().mockReturnValue("blob:test");
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
+  render(<Preparation />);
+  if (isPdf) {
+    await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
+    await userEvent.upload(screen.getByLabelText("발표 PDF 파일 선택"), new File(["%PDF"], "slides.pdf", { type: "application/pdf" }));
+  }
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert")).toHaveTextContent("카메라 권한과 연결 상태");
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+it("does not open a popup if preparation unmounts while permission is pending", async () => {
+  let resolveCamera!: (stream: MediaStream) => void;
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(new Promise((resolve) => { resolveCamera = resolve; }));
+  const open = vi.spyOn(window, "open").mockReturnValue(null);
+  const { unmount } = render(<Preparation />);
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  unmount();
+  await act(async () => { resolveCamera({ getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream); });
+  expect(open).not.toHaveBeenCalled();
+});
+it("retries a blocked popup synchronously once the camera is connected", async () => {
+  const open = vi.spyOn(window, "open").mockReturnValueOnce(null).mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  render(<Preparation />);
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("발표 시작을 다시");
+  fireEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).toHaveBeenCalledTimes(2);
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 it("navigates five slides with accessible icon buttons and keys", async () => {
   render(<DemoPresentation />);
@@ -59,25 +135,47 @@ it("uses Fullscreen API and reports a rejected request", async () => {
 it("retains camera permission errors with the compact controls", async () => {
   Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: vi.fn().mockRejectedValue(new DOMException("denied", "NotAllowedError")) } });
   render(<DemoPresentation />);
-  await userEvent.click(screen.getByRole("button", { name: "모션 시작" }));
+  expect(screen.queryByRole("button", { name: "모션 시작" })).not.toBeInTheDocument();
   await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("카메라 권한"));
   expect(screen.queryByRole("button", { name: "발표 종료" })).not.toBeInTheDocument();
-  expect(screen.getAllByRole("button")).toHaveLength(4);
+  expect(screen.getAllByRole("button")).toHaveLength(3);
 });
 
-it("starts the control center camera and reuses it when the demo is already open", async () => {
-  const stop = vi.fn();
-  Object.defineProperty(navigator, "mediaDevices", { configurable: true, value: { getUserMedia: vi.fn().mockResolvedValue({ getTracks: () => [{ stop }] }) } });
-  vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
-  const { result } = renderHook(() => usePresentationController());
-  expect(result.current.cameraState).toBe("idle");
-  render(<PresentationPreparation controller={result.current} />);
+it("starts the control center camera and reuses it while restarting an existing popup", async () => {
+  const postMessage = vi.fn();
+  vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn(), postMessage } as unknown as Window);
+  render(<Preparation />);
   await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
-  await waitFor(() => expect(result.current.cameraState).toBe("active"));
   await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
   expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
-  expect(stop).not.toHaveBeenCalled();
-  expect(result.current.cameraState).toBe("active");
+  expect(postMessage).toHaveBeenCalledWith({ type: "start-presentation" }, window.location.origin);
+});
+it.each([false, true])("starts motion once in StrictMode and releases the camera on unmount (PDF: %s)", async (isPdf) => {
+  const stop = vi.fn();
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({ getTracks: () => [{ stop }] } as unknown as MediaStream);
+  const { unmount } = render(<StrictMode><DemoPresentation pdf={isPdf ? { numPages: 12 } as PDFDocumentProxy : undefined} /></StrictMode>);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("button", { name: "모션 시작" })).not.toBeInTheDocument();
+  unmount();
+  expect(stop).toHaveBeenCalledTimes(1);
+});
+it.each([false, true])("retries denied permission from the opener without toggling motion off (PDF: %s)", async (isPdf) => {
+  Object.defineProperty(window, "opener", { configurable: true, value: window });
+  const getMedia = vi.mocked(navigator.mediaDevices.getUserMedia);
+  getMedia.mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+  render(<DemoPresentation pdf={isPdf ? { numPages: 12 } as PDFDocumentProxy : undefined} />);
+  await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("카메라 권한"));
+  const restart = (origin: string) => fireEvent(window, new MessageEvent("message", { origin, source: window, data: { type: "start-presentation" } }));
+  restart("https://untrusted.example");
+  expect(getMedia).toHaveBeenCalledTimes(1);
+  restart(window.location.origin);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+  expect(getMedia).toHaveBeenCalledTimes(2);
+  restart(window.location.origin);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+  expect(getMedia).toHaveBeenCalledTimes(2);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
 });
 it("synchronizes fullscreen exit with the browser and supports keys while a control is focused", async () => {
   const exit = vi.fn().mockResolvedValue(undefined);
@@ -100,7 +198,8 @@ it("opens an uploaded PDF in a named popup and reuses it", async () => {
   Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
   Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: vi.fn() });
   const focus = vi.fn();
-  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus } as unknown as Window);
+  const postMessage = vi.fn();
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus, postMessage } as unknown as Window);
   render(<Preparation />);
   await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
   const start = screen.getByRole("button", { name: "발표 시작" });
@@ -117,6 +216,8 @@ it("opens an uploaded PDF in a named popup and reuses it", async () => {
   expect(open).toHaveBeenCalledTimes(1);
   expect(create).toHaveBeenCalledWith(file);
   expect(focus).toHaveBeenCalledTimes(2);
+  expect(postMessage).toHaveBeenCalledWith({ type: "start-presentation" }, window.location.origin);
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
 });
 
 it("rejects invalid dropped files and releases a PDF URL when the popup is blocked", async () => {
@@ -148,4 +249,29 @@ it("uses the PDF page count for navigation beyond the demo deck", async () => {
   expect(screen.getByText("11 / 12")).toBeVisible();
   fireEvent.keyDown(window, { key: "Home" });
   expect(screen.getByText("PDF page 1")).toBeVisible();
+});
+
+it.each([false, true])("shows emergency pause and gesture resume clearly (PDF: %s)", async (isPdf) => {
+  render(<DemoPresentation pdf={isPdf ? { numPages: 4 } as PDFDocumentProxy : undefined} />);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+  act(() => tracking.stop());
+  expect(screen.getByRole("status")).toHaveTextContent("PAUSED");
+  expect(screen.getByRole("status")).toHaveAttribute("title", expect.stringContaining("엄지·새끼손가락을 펴면 재개"));
+  await act(async () => tracking.gesture("toggle-motion"));
+  expect(screen.getByRole("status")).toHaveTextContent("ON AIR");
+});
+it.each(["loading", "no-hand", "tracking", "error"])("keeps the on-air indicator stable for tracker %s", async (state) => {
+  tracking.state = state;
+  render(<DemoPresentation />);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+});
+
+it.each([false, true])("returns the indicator to ON AIR after a paused slide-return pose (PDF: %s)", async (isPdf) => {
+  render(<DemoPresentation pdf={isPdf ? { numPages: 4 } as PDFDocumentProxy : undefined} />);
+  await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("ON AIR"));
+  await act(async () => { await tracking.mode("cursor"); });
+  act(() => tracking.stop());
+  expect(screen.getByRole("status")).toHaveTextContent("PAUSED");
+  await act(async () => { await tracking.mode("slide"); });
+  expect(screen.getByRole("status")).toHaveTextContent("ON AIR");
 });
