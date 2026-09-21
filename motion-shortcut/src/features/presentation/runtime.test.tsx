@@ -278,6 +278,28 @@ describe("web and desktop runtime boundaries", () => {
       expect(result.current.permissions.camera).toBe("denied"),
     );
   });
+  it("keeps camera permission granted when a pending permission refresh resolves after camera startup", async () => {
+    let resolvePermission!: (status: PermissionStatus) => void;
+    const pendingPermission = new Promise<PermissionStatus>((resolve) => {
+      resolvePermission = resolve;
+    });
+    vi.mocked(navigator.permissions.query).mockReturnValue(pendingPermission);
+    const { result } = renderHook(usePresentationController);
+    let refresh!: Promise<void>;
+    act(() => {
+      refresh = result.current.refreshSystemStatus();
+    });
+    await act(async () => {
+      await result.current.startCamera();
+    });
+    expect(result.current.permissions.camera).toBe("granted");
+    await act(async () => {
+      resolvePermission({ state: "prompt" } as PermissionStatus);
+      await refresh;
+    });
+    expect(result.current.cameraState).toBe("active");
+    expect(result.current.permissions.camera).toBe("granted");
+  });
   it("desktop refresh still updates permissions when display enumeration fails", async () => {
     const getPermissions = vi.fn().mockResolvedValue({
       camera: "granted",

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { PresentationController } from "../features/presentation/usePresentationController";
 export function PresentationPreparation({
   controller: c,
@@ -10,10 +10,13 @@ export function PresentationPreparation({
   const pdfUrl = useRef("");
   const openedFile = useRef<File | null>(null);
   const [popupError, setPopupError] = useState("");
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const requestVersion = useRef(0);
+  useEffect(() => () => { requestVersion.current += 1; }, []);
   const openDemo = () => {
     if (popup.current && !popup.current.closed) {
       setPopupError("");
-      void c.startCamera();
       popup.current.postMessage({ type: "start-presentation" }, window.location.origin);
       popup.current.focus();
       return;
@@ -23,12 +26,11 @@ export function PresentationPreparation({
     url.hash = "";
     const next = window.open(url.href, "adam-demo-presentation", "popup,width=1280,height=800");
     if (!next) {
-      setPopupError("팝업이 차단되었습니다. 주소창의 팝업 차단 아이콘 또는 브라우저 사이트 설정에서 이 사이트의 팝업을 허용한 뒤 발표 시작을 다시 누르세요.");
+      setPopupError("카메라는 연결되었습니다. 팝업이 차단되어 발표 시작을 다시 눌러 주세요. 계속 차단되면 브라우저에서 이 사이트의 팝업을 허용해 주세요.");
       return;
     }
     popup.current = next;
     setPopupError("");
-    void c.startCamera();
     next.focus();
   };
   const [editing, setEditing] = useState<string | null>(null),
@@ -60,7 +62,6 @@ export function PresentationPreparation({
     if (!pdfFile) return;
     if (pdfPopup.current && !pdfPopup.current.closed && openedFile.current === pdfFile) {
       setPopupError("");
-      void c.startCamera();
       pdfPopup.current.postMessage({ type: "start-presentation" }, window.location.origin);
       pdfPopup.current.focus();
       return;
@@ -72,7 +73,7 @@ export function PresentationPreparation({
     const next = window.open(url.href, "adam-pdf-presentation", "popup,width=1280,height=800");
     if (!next) {
       URL.revokeObjectURL(blobUrl);
-      setPopupError("팝업이 차단되었습니다. 이 사이트의 팝업을 허용한 뒤 발표 시작을 다시 누르세요.");
+      setPopupError("카메라는 연결되었습니다. 팝업이 차단되어 발표 시작을 다시 눌러 주세요. 계속 차단되면 브라우저에서 이 사이트의 팝업을 허용해 주세요.");
       return;
     }
     if (pdfUrl.current) URL.revokeObjectURL(pdfUrl.current);
@@ -80,8 +81,29 @@ export function PresentationPreparation({
     openedFile.current = pdfFile;
     pdfPopup.current = next;
     setPopupError("");
-    void c.startCamera();
     next.focus();
+  };
+  const startPresentation = async () => {
+    if (startingRef.current || c.cameraState === "requesting" || (source === "pdf" && !pdfFile)) return;
+    startingRef.current = true;
+    setStarting(true);
+    setPopupError("");
+    const version = requestVersion.current;
+    try {
+      // Keep an already-connected camera's popup opening inside the click event.
+      if (c.cameraState !== "active" && !(await c.startCamera())) {
+        if (version === requestVersion.current) {
+          setPopupError("카메라를 연결하지 못해 발표 창을 열지 않았습니다. 카메라 권한과 연결 상태를 확인한 뒤 발표 시작을 다시 눌러 주세요.");
+        }
+        return;
+      }
+      if (version !== requestVersion.current) return;
+      if (source === "pdf") openPdf();
+      else openDemo();
+    } finally {
+      startingRef.current = false;
+      if (version === requestVersion.current) setStarting(false);
+    }
   };
   return (
     <section className="preparation-panel" aria-labelledby="preparation-title">
@@ -110,12 +132,14 @@ export function PresentationPreparation({
             aria-label="발표 자료 선택"
           >
             <button
+              disabled={starting}
               aria-pressed={source === "demo"}
               onClick={() => setSource("demo")}
             >
               튜토리얼
             </button>
             <button
+              disabled={starting}
               aria-pressed={source === "pdf"}
               onClick={() => setSource("pdf")}
             >
@@ -140,6 +164,7 @@ export function PresentationPreparation({
               <button
                 type="button"
                 className="uploaded-pdf-remove"
+                disabled={starting}
                 aria-label="PDF 삭제"
                 title="PDF 삭제"
                 onClick={() => {
@@ -192,10 +217,11 @@ export function PresentationPreparation({
               type="button"
               className="primary-button"
               title={source === "demo" ? "데모 발표 창 열기" : "PDF 발표 창 열기"}
-              disabled={source === "pdf" && !pdfFile}
-              onClick={source === "pdf" ? openPdf : openDemo}
+              disabled={starting || c.cameraState === "requesting" || (source === "pdf" && !pdfFile)}
+              aria-busy={starting}
+              onClick={() => void startPresentation()}
             >
-              발표 시작 <span aria-hidden="true">↗</span>
+              {starting ? "카메라 확인 중…" : "발표 시작"} <span aria-hidden="true">↗</span>
             </button>
           </div>
           {popupError && <p role="alert">{popupError}</p>}

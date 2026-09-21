@@ -366,7 +366,10 @@ export function usePresentationController(target: "external" | "demo" = "externa
         const result = await navigator.permissions.query({
           name: "camera" as PermissionName,
         });
-        camera = result.state === "prompt" ? "not-determined" : result.state;
+        // Camera startup may complete while the permission query is pending.
+        camera = streamRef.current
+          ? "granted"
+          : result.state === "prompt" ? "not-determined" : result.state;
       } catch {
         /* Some browsers cannot query camera permission; do not invent a denial. */
       }

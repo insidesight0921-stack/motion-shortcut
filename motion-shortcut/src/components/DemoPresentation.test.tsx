@@ -44,6 +44,66 @@ it("explains popup blocking and keeps PDF presentation disabled", async () => {
   await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
   expect(screen.getByRole("button", { name: "발표 시작" })).toBeDisabled();
 });
+it.each([false, true])("waits for camera permission before opening a presentation (PDF: %s)", async (isPdf) => {
+  let resolveCamera!: (stream: MediaStream) => void;
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(new Promise((resolve) => { resolveCamera = resolve; }));
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  const create = vi.fn().mockReturnValue("blob:test");
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
+  render(<Preparation />);
+  if (isPdf) {
+    await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
+    await userEvent.upload(screen.getByLabelText("발표 PDF 파일 선택"), new File(["%PDF"], "slides.pdf", { type: "application/pdf" }));
+  }
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  const pending = screen.getByRole("button", { name: "카메라 확인 중…" });
+  expect(pending).toBeDisabled();
+  await userEvent.click(pending);
+  expect(open).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  await act(async () => { resolveCamera({ getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream); });
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(open.mock.calls[0][1]).toBe(isPdf ? "adam-pdf-presentation" : "adam-demo-presentation");
+});
+it.each([false, true])("keeps the popup closed after camera denial and allows a successful retry (PDF: %s)", async (isPdf) => {
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockRejectedValueOnce(new DOMException("denied", "NotAllowedError"));
+  const open = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  const create = vi.fn().mockReturnValue("blob:test");
+  Object.defineProperty(URL, "createObjectURL", { configurable: true, value: create });
+  render(<Preparation />);
+  if (isPdf) {
+    await userEvent.click(screen.getByRole("button", { name: "내 PDF 업로드" }));
+    await userEvent.upload(screen.getByLabelText("발표 PDF 파일 선택"), new File(["%PDF"], "slides.pdf", { type: "application/pdf" }));
+  }
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).not.toHaveBeenCalled();
+  expect(create).not.toHaveBeenCalled();
+  expect(screen.getByRole("alert")).toHaveTextContent("카메라 권한과 연결 상태");
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
+it("does not open a popup if preparation unmounts while permission is pending", async () => {
+  let resolveCamera!: (stream: MediaStream) => void;
+  vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(new Promise((resolve) => { resolveCamera = resolve; }));
+  const open = vi.spyOn(window, "open").mockReturnValue(null);
+  const { unmount } = render(<Preparation />);
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  unmount();
+  await act(async () => { resolveCamera({ getTracks: () => [{ stop: vi.fn() }] } as unknown as MediaStream); });
+  expect(open).not.toHaveBeenCalled();
+});
+it("retries a blocked popup synchronously once the camera is connected", async () => {
+  const open = vi.spyOn(window, "open").mockReturnValueOnce(null).mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
+  render(<Preparation />);
+  await userEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(screen.getByRole("alert")).toHaveTextContent("발표 시작을 다시");
+  fireEvent.click(screen.getByRole("button", { name: "발표 시작" }));
+  expect(open).toHaveBeenCalledTimes(2);
+  expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+});
 it("navigates five slides with accessible icon buttons and keys", async () => {
   render(<DemoPresentation />);
   expect(screen.getByText("1 / 5")).toBeVisible();
