@@ -21,8 +21,10 @@
 .demo-slide h1 { font-size: clamp(26px, 3.6vw, 52px); font-weight: 500; letter-spacing: -.035em; line-height: 1.25; margin: 16px 0; }
 .demo-slide > p, .tutorial-mode-copy p { font-size: clamp(14px, 1.5vw, 19px); line-height: 1.65; margin: 12px auto; max-width: 780px; }
 .demo-controls { position: relative; flex-shrink: 0; padding: 12px 20px; gap: 8px; }
-.tutorial-motion { width: min(100%, 880px); }
-.tutorial-motion svg { display: block; width: 100%; max-height: 38vh; }
+.tutorial-motion { position: relative; width: min(100%, 880px, 98vh); aspect-ratio: 800 / 310; margin-inline: auto; }
+.tutorial-motion svg, .tutorial-motion .tutorial-hands { position: absolute; inset: 0; width: 100%; height: 100%; }
+.tutorial-motion .tutorial-hands { pointer-events: none; }
+.tutorial-motion .tutorial-hand { position: absolute; display: block; }
 .tutorial-motion text { fill: #d5c1e9; font-size: 16px; }
 .tutorial-mode-copy { display: grid; grid-template-columns: 1.2fr 1fr; gap: 32px; width: min(100%, 880px); }
 .tutorial-mode-copy p { font-size: 15px; }
