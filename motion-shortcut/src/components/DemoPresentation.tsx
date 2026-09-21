@@ -6,7 +6,7 @@ import { PdfPage } from "./PdfPage";
 import { TutorialMotion } from "./TutorialMotion";
 
 const slides = [
-  ["손끝으로 여는 발표", "아래 모션 시작 버튼을 누르고 이동을 시작해보세요."],
+  ["손끝으로 여는 발표", "오른쪽으로 스와이프해 이동을 시작해보세요."],
   ["화면을 가리고 다시 켜보세요", "손바닥을 펼쳐 유지하면 화면이 가려집니다. 다시 켜려면 손을 카메라 밖으로 잠시 내린 뒤, 손바닥을 펼쳐 다시 보여주세요."],
   ["포인터로 전달하세요", ""],
   ["잠시 멈추고 다시 시작하세요", "양손 주먹을 유지하면 모션이 정지됩니다. 재개하려면 엄지와 새끼손가락을 펴 전화기 모양을 보여주세요."],
@@ -15,11 +15,33 @@ const slides = [
 
 export function DemoPresentation({ pdf }: { pdf?: PDFDocumentProxy }) {
   const pageCount = pdf?.numPages ?? slides.length;
-  const c = usePresentationController("demo", pageCount);
   const stage = useRef<HTMLDivElement>(null);
   const [fullscreen, setFullscreen] = useState(false);
   const [error, setError] = useState("");
+  const toggleFullscreen = async () => {
+    try {
+      if (document.fullscreenElement) await document.exitFullscreen();
+      else await stage.current?.requestFullscreen({ navigationUI: "hide" });
+      setError("");
+    } catch { setError("전체 화면을 시작하지 못했습니다. 브라우저의 전체 화면 권한을 확인하고 다시 시도하세요."); }
+  };
+  const c = usePresentationController("demo", pageCount);
   const { executeAction, stopCamera, videoRef, canvasRef } = c;
+  const startRef = useRef(c.startMotion);
+  useEffect(() => { startRef.current = c.startMotion; });
+  useEffect(() => {
+    // Cancel the first StrictMode setup before requesting the camera.
+    const timer = window.setTimeout(() => void startRef.current(), 0);
+    const restart = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin || !window.opener || event.source !== window.opener) return;
+      if (event.data?.type === "start-presentation") void startRef.current();
+    };
+    window.addEventListener("message", restart);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("message", restart);
+    };
+  }, []);
   const actionRef = useRef(executeAction);
   const stopRef = useRef(stopCamera);
   const pageCountRef = useRef(pageCount);
@@ -45,13 +67,9 @@ export function DemoPresentation({ pdf }: { pdf?: PDFDocumentProxy }) {
       window.removeEventListener("pagehide", unload);
     };
   }, []);
-  const toggleFullscreen = async () => {
-    try {
-      if (document.fullscreenElement) await document.exitFullscreen();
-      else await stage.current?.requestFullscreen({ navigationUI: "hide" });
-      setError("");
-    } catch { setError("전체 화면을 시작하지 못했습니다. 브라우저의 전체 화면 권한을 확인하고 다시 시도하세요."); }
-  };
+  const motionStatus = c.motionOn
+    ? { tone: "active", label: "모션 제어 중", hint: "양손 주먹으로 일시정지" }
+    : { tone: "paused", label: "모션 일시정지", hint: "엄지·새끼손가락을 펴면 재개" };
   return <div ref={stage} className="demo-presentation">
     <div className="demo-media" aria-hidden="true"><video ref={videoRef} muted playsInline /><canvas ref={canvasRef} /></div>
     <main className={`demo-slide ${pdf ? "pdf-slide" : ""} ${c.rehearsalBlack ? "is-black" : ""}`} aria-label={pdf ? "PDF 슬라이드" : "데모 슬라이드"}>
@@ -84,12 +102,12 @@ export function DemoPresentation({ pdf }: { pdf?: PDFDocumentProxy }) {
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d={fullscreen ? "M4 9h5V4m6 0v5h5M4 15h5v5m6 0v-5h5" : "M9 4H4v5m11-5h5v5M4 15v5h5m6 0h5v-5"} /></svg>
           <span className="demo-action-label">{fullscreen ? "전체 화면 종료" : "전체 화면"}</span>
         </button>
-        <button className="demo-motion-toggle" aria-label={c.motionOn ? "모션 정지" : "모션 시작"} title={c.cameraState === "requesting" ? "카메라 연결 중…" : c.motionOn ? "모션 정지" : "모션 시작"} aria-pressed={c.motionOn} aria-busy={c.cameraState === "requesting"} disabled={c.cameraState === "requesting"} onClick={() => void c.toggleMotion()}>
-          <svg viewBox="0 0 24 24" aria-hidden="true">{c.motionOn ? <path d="M9 5v14M15 5v14" /> : <path d="m9 5 10 7-10 7Z" />}</svg>
-          <span className="demo-action-label">{c.cameraState === "requesting" ? "연결 중…" : c.motionOn ? "모션 정지" : "모션 시작"}</span>
-        </button>
+        <span className={`demo-on-air is-${motionStatus.tone}`} role="status" aria-live="polite" aria-atomic="true" aria-label={motionStatus.label} title={`${motionStatus.label} · ${motionStatus.hint}`}>
+          <span className="demo-on-air-dot" aria-hidden="true" />
+          {c.motionOn ? "ON AIR" : "PAUSED"}
+        </span>
       </div>
-      <p className="demo-control-status" role="status">{c.cameraState === "requesting" ? "카메라 연결 중…" : c.motionOn ? "모션 인식 중 · 양손 주먹으로 긴급 정지" : "모션 정지됨"} · 방향키 / Home / End</p>
+      <p className="demo-control-status">방향키 / Home / End</p>
     </footer>
   </div>;
 }

@@ -37,6 +37,13 @@ const GESTURE_LABELS: Record<MotionGestureId, string> = {
   victory: "V 사인",
   "open-palm": "손바닥 펼치기",
   fist: "주먹 쥐기",
+  "thumbs-up": "엄지 위",
+  "thumbs-down": "엄지 아래",
+  "ok": "OK 사인",
+  "three-fingers": "세 손가락 (엄지·검지·새끼)",
+  "point-left": "왼쪽 가리키기",
+  "point-right": "오른쪽 가리키기",
+  "point-up": "위 가리키기",
   "toggle-motion": "전화 모양",
 };
 
@@ -48,6 +55,7 @@ function gestureHoldMs(gesture: MotionGestureId) {
   if (gesture === "index" || gesture === "victory") return 650;
   if (gesture === "open-palm") return 760;
   if (gesture === "fist") return 950;
+  if (gesture !== "toggle-motion") return 760;
   return 1200;
 }
 
@@ -73,7 +81,10 @@ export function useHandTracking(
     hands: Array<Array<{ x: number; y: number }>>;
     ratio: number;
   }) => void,
+  assignedGestures: readonly (GesturePattern | "")[] = [],
 ) {
+  const assignedGesturesRef = useRef(assignedGestures);
+  useEffect(() => { assignedGesturesRef.current = assignedGestures; }, [assignedGestures]);
   const overlayFrameRef = useRef(onOverlayFrame);
   useEffect(() => {
     overlayFrameRef.current = onOverlayFrame;
@@ -253,7 +264,7 @@ export function useHandTracking(
             emergencyStopRef,
             onEmergencyStopRef.current,
           );
-          const modeGesture = emergencyStop ? null : detectModeGesture(hands);
+          const modeGesture = emergencyStop ? null : detectModeGesture(hands, assignedGesturesRef.current);
           setModeGesture(modeGesture);
           updateModeGesture(
             modeGesture,
@@ -299,7 +310,7 @@ export function useHandTracking(
             leftClickRef,
             onCursorClickRef.current,
           );
-          const detectedGestures = hands.map(classifyGesture);
+          const detectedGestures = hands.map((hand) => resolveGesture(hand, assignedGesturesRef.current));
           const palmBlocked = blockPalmAfterSwipe(palmBlockedRef, Boolean(swipeGesture), detectedGestures.includes("open-palm"));
           const detected =
             modeGesture || emergencyStop || swipeGesture || (palmBlocked && detectedGestures.includes("open-palm"))
@@ -483,9 +494,7 @@ function isOpenHand(landmarks: Array<{ x: number; y: number }>) {
 }
 
 function isFist(landmarks: Array<{ x: number; y: number }>) {
-  return [8, 12, 16, 20].every(
-    (tip, index) => !fingerExtended(landmarks, tip, [6, 10, 14, 18][index]),
-  );
+  return classifyGesture(landmarks) === "fist";
 }
 
 function updateLeftHandClick(
@@ -649,13 +658,20 @@ function detectSingleHandMode(
   return null;
 }
 
-function detectModeGesture(
+export function detectModeGesture(
   hands: Array<Array<{ x: number; y: number }>>,
+  assignedGestures: readonly (GesturePattern | "")[] = [],
 ): PresentationMode | null {
-  for (const hand of hands) {
-    const singleHandMode = detectSingleHandMode(hand);
-    if (singleHandMode) return singleHandMode;
-  }
+  // Returning to slides wins regardless of MediaPipe's hand ordering.
+  // The other hand may still be holding the pointer pose.
+  const singleHandModes = hands.map((hand) => {
+    const gesture = classifyGesture(hand);
+    if (gesture === "three-fingers" && assignedGestures.includes(gesture)) return null;
+    return detectSingleHandMode(hand);
+  });
+  if (singleHandModes.includes("slide")) return "slide";
+  const pointerMode = singleHandModes.find((mode) => mode !== null);
+  if (pointerMode) return pointerMode;
   if (hands.length < 2) return null;
   if (isCrossedIndexGesture(hands)) return "cursor";
   if (hands.every(isModeOpenHand)) return "slide";
@@ -720,11 +736,38 @@ export function classifyGesture(
   const phoneSpread = distance(4, 20) > palmScale * 1.25;
   if (thumb && phoneSpread && !index && !middle && !ring && pinky)
     return "toggle-motion";
+  if (distance(4, 8) < palmScale * 0.3 && middle && ring && pinky)
+    return "ok";
+  if (thumb && index && !middle && !ring && pinky) return "three-fingers";
+  if (!index && !middle && !ring && !pinky && thumb && distance(4, 5) > palmScale * 0.65) {
+    const dx = landmarks[4].x - landmarks[2].x;
+    const dy = landmarks[4].y - landmarks[2].y;
+    if (Math.abs(dy) > palmScale * 0.35 && Math.abs(dy) > Math.abs(dx) * 1.5)
+      return dy < 0 ? "thumbs-up" : "thumbs-down";
+  }
   if (index && middle && ring && pinky) return "open-palm";
   if (index && middle && !ring && !pinky) return "victory";
-  if (index && !middle && !ring && !pinky) return "index";
+  if (index && !middle && !ring && !pinky) {
+    // Mirror x to match the camera preview and the existing swipe directions.
+    const dx = landmarks[6].x - landmarks[8].x;
+    const dy = landmarks[8].y - landmarks[6].y;
+    if (Math.abs(dx) > palmScale * 0.25 && Math.abs(dx) > Math.abs(dy) * 1.5)
+      return dx > 0 ? "point-right" : "point-left";
+    if (-dy > palmScale * 0.25 && -dy > Math.abs(dx) * 1.5) return "point-up";
+    return "index";
+  }
   if (!index && !middle && !ring && !pinky) return "fist";
   return null;
+}
+
+// Unassigned directional poses retain the reserved index gesture for saved profiles.
+export function resolveGesture(
+  landmarks: Array<{ x: number; y: number }>,
+  assignedGestures: readonly (GesturePattern | "")[],
+): MotionGestureId | null {
+  const gesture = classifyGesture(landmarks);
+  if ((gesture === "point-left" || gesture === "point-right" || gesture === "point-up") && !assignedGestures.includes(gesture)) return "index";
+  return gesture;
 }
 
 export function detectSwipeGesture(

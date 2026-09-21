@@ -11,7 +11,13 @@ export function PresentationPreparation({
   const openedFile = useRef<File | null>(null);
   const [popupError, setPopupError] = useState("");
   const openDemo = () => {
-    if (popup.current && !popup.current.closed) { void c.startCamera(); popup.current.focus(); return; }
+    if (popup.current && !popup.current.closed) {
+      setPopupError("");
+      void c.startCamera();
+      popup.current.postMessage({ type: "start-presentation" }, window.location.origin);
+      popup.current.focus();
+      return;
+    }
     const url = new URL(window.location.href);
     url.search = "?demo";
     url.hash = "";
@@ -55,6 +61,7 @@ export function PresentationPreparation({
     if (pdfPopup.current && !pdfPopup.current.closed && openedFile.current === pdfFile) {
       setPopupError("");
       void c.startCamera();
+      pdfPopup.current.postMessage({ type: "start-presentation" }, window.location.origin);
       pdfPopup.current.focus();
       return;
     }

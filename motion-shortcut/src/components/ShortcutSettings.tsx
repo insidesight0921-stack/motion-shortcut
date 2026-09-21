@@ -37,6 +37,7 @@ export function ShortcutSettings({
         이미 사용 중인 모션은 다른 기능에 지정할 수 없습니다.
         모션을 옮기려면 기존 기능을 ‘지정 안 함’으로 변경하세요.
       </p>
+      <p>세 손가락은 엄지·검지·새끼손가락을 펴세요. 방향은 거울처럼 보이는 카메라 화면 기준입니다. 새 손동작은 약 0.8초 유지하세요. 지정한 방향 가리키기와 세 손가락은 기존 검지 동작·포인터 모드 전환보다 우선합니다.</p>
       <div
         className="input-customization-scroll"
         role="region"

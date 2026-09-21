@@ -12,7 +12,14 @@ export type GesturePattern =
   | "index"
   | "victory"
   | "open-palm"
-  | "fist";
+  | "fist"
+  | "thumbs-up"
+  | "thumbs-down"
+  | "ok"
+  | "three-fingers"
+  | "point-left"
+  | "point-right"
+  | "point-up";
 
 export type PresentationAction =
   | "next-slide"
@@ -54,6 +61,13 @@ export const GESTURE_OPTIONS: Array<{ id: GesturePattern; label: string }> = [
   { id: "victory", label: "V 사인" },
   { id: "open-palm", label: "손바닥 펼치기" },
   { id: "fist", label: "주먹 쥐기" },
+  { id: "thumbs-up", label: "엄지 위" },
+  { id: "thumbs-down", label: "엄지 아래" },
+  { id: "ok", label: "OK 사인" },
+  { id: "three-fingers", label: "세 손가락 (엄지·검지·새끼)" },
+  { id: "point-left", label: "왼쪽 가리키기" },
+  { id: "point-right", label: "오른쪽 가리키기" },
+  { id: "point-up", label: "위 가리키기" },
 ];
 
 export const ACTION_LABELS: Record<PresentationAction, string> = {

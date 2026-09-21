@@ -176,7 +176,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
         error instanceof DOMException && error.name === "NotAllowedError"
           ? isDesktop
             ? "시스템 설정에서 실행 중인 앱의 카메라 권한을 허용하세요."
-            : "브라우저의 사이트 설정에서 카메라 권한을 허용하세요."
+            : "브라우저의 사이트 설정에서 카메라 권한을 허용한 뒤 발표 시작을 다시 누르세요."
           : error instanceof Error
             ? error.message
             : "카메라를 연결하지 못했습니다.";
@@ -228,6 +228,10 @@ export function usePresentationController(target: "external" | "demo" = "externa
       addLog("모션 OFF");
       return;
     }
+    await startMotion();
+  };
+
+  const startMotion = async () => {
     const cameraReady = await startCamera();
     if (!cameraReady) return;
     const enabled = api
@@ -554,8 +558,13 @@ export function usePresentationController(target: "external" | "demo" = "externa
     cameraState === "active",
     "#b794ff",
     handleGesture,
-    (nextMode) => {
-      if (!pointerTestRef.current && motionOn && mode !== nextMode) void setPresentationMode(nextMode);
+    async (nextMode) => {
+      if (pointerTestRef.current || cameraState !== "active") return;
+      // A completed slide-return pose also explicitly resumes paused motion.
+      // Other mode poses must not cancel an emergency stop.
+      if (!motionOn && nextMode !== "slide") return;
+      if (mode !== nextMode) await setPresentationMode(nextMode);
+      if (!motionOn && nextMode === "slide") await startMotion();
     },
     (point) => {
       if (pointerTestRef.current) { setTestPointer(point); return; }
@@ -591,6 +600,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
       addLog("양손 주먹 · 긴급 정지");
     },
     (frame) => api?.sendHandOverlayFrame?.(frame),
+    FIXED_ACTIONS.map((action) => profile.mappings[action]),
   );
   const activeTracking = tracking;
   const selectedResource = profile.resources.filter((item) => item.value)[
@@ -638,6 +648,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
     startCamera,
     stopCamera,
     toggleMotion,
+    startMotion,
     executeAction,
     openResource,
     addResource,
