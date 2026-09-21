@@ -102,6 +102,28 @@ describe("web and desktop runtime boundaries", () => {
     expect(result.current.rehearsalSlide).toBe(2);
     expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
   });
+  it("shares the camera between control center and presentation without stopping the other consumer", async () => {
+    const stop = vi.fn();
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValue({ getTracks: () => [{ stop }] } as unknown as MediaStream);
+    const center = renderHook(() => usePresentationController());
+    const popup = renderHook(() => usePresentationController("demo"));
+    await act(async () => {
+      await Promise.all([center.result.current.startCamera(), popup.result.current.startMotion()]);
+    });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    expect(center.result.current.permissions.camera).toBe("granted");
+    expect(popup.result.current.permissions.camera).toBe("granted");
+    expect(popup.result.current.motionOn).toBe(true);
+    await act(async () => { await center.result.current.stopCamera(); });
+    expect(stop).not.toHaveBeenCalled();
+    expect(popup.result.current.cameraState).toBe("active");
+    await act(async () => { await center.result.current.startCamera(); });
+    expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledTimes(1);
+    popup.unmount();
+    expect(stop).not.toHaveBeenCalled();
+    center.unmount();
+    expect(stop).toHaveBeenCalledTimes(1);
+  });
   it("stops a pending camera request when the home camera is handed off", async () => {
     let resolve!: (stream: MediaStream) => void;
     vi.mocked(navigator.mediaDevices.getUserMedia).mockReturnValue(new Promise(r => { resolve = r; }));

@@ -1,3 +1,4 @@
+import { acquireCamera } from "../camera/sharedCamera";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   useHandTracking,
@@ -76,6 +77,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const petCanvasRef = useRef<HTMLCanvasElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const releaseCameraRef = useRef<(() => void) | null>(null);
   const cameraRequestRef = useRef(0);
   const requestingRef = useRef(false);
 
@@ -138,29 +140,20 @@ export function usePresentationController(target: "external" | "demo" = "externa
     setCameraState("requesting");
     setCameraError("");
     try {
-      if (!navigator.mediaDevices?.getUserMedia)
-        throw new Error(
-          "카메라는 HTTPS 또는 localhost 환경에서 지원되는 브라우저로 실행하세요.",
-        );
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: "user",
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-        },
-        audio: false,
-      });
+      const lease = await acquireCamera();
+      const { stream } = lease;
       if (request !== cameraRequestRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
+        lease.release();
         return false;
       }
       streamRef.current = stream;
+      releaseCameraRef.current = lease.release;
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         await videoRef.current.play();
       }
       if (request !== cameraRequestRef.current) {
-        stream.getTracks().forEach((track) => track.stop());
+        lease.release();
         return false;
       }
       setCameraState("active");
@@ -170,7 +163,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
       return true;
     } catch (error) {
       if (request !== cameraRequestRef.current) return false;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      releaseCameraRef.current?.();
       streamRef.current = null;
       const message =
         error instanceof DOMException && error.name === "NotAllowedError"
@@ -196,7 +189,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
 
   const stopCamera = async () => {
     cameraRequestRef.current += 1;
-    streamRef.current?.getTracks().forEach((track) => track.stop());
+    releaseCameraRef.current?.();
     streamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
     setCameraState("idle");
@@ -421,11 +414,8 @@ export function usePresentationController(target: "external" | "demo" = "externa
           await refreshSystemStatus();
           return;
         }
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: false,
-        });
-        stream.getTracks().forEach((track) => track.stop());
+        const lease = await acquireCamera();
+        lease.release();
       }
       await refreshSystemStatus();
     } catch {
@@ -497,7 +487,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
     subscriptions.push(
       api?.onCameraChanged((enabled) => {
         if (enabled) return;
-        streamRef.current?.getTracks().forEach((track) => track.stop());
+        releaseCameraRef.current?.();
         streamRef.current = null;
         if (videoRef.current) videoRef.current.srcObject = null;
         setCameraState("idle");
@@ -546,7 +536,7 @@ export function usePresentationController(target: "external" | "demo" = "externa
   useEffect(
     () => () => {
       cameraRequestRef.current += 1;
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      releaseCameraRef.current?.();
     },
     [],
   );

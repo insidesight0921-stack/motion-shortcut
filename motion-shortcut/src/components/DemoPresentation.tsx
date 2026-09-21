@@ -98,14 +98,14 @@ export function DemoPresentation({ pdf }: { pdf?: PDFDocumentProxy }) {
         </button>
       </nav>
       <div className="demo-actions">
-        <button aria-label={fullscreen ? "전체 화면 종료" : "전체 화면"} title={fullscreen ? "전체 화면 종료" : "전체 화면"} aria-pressed={fullscreen} onClick={() => void toggleFullscreen()}>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={fullscreen ? "M4 9h5V4m6 0v5h5M4 15h5v5m6 0v-5h5" : "M9 4H4v5m11-5h5v5M4 15v5h5m6 0h5v-5"} /></svg>
-          <span className="demo-action-label">{fullscreen ? "전체 화면 종료" : "전체 화면"}</span>
-        </button>
         <span className={`demo-on-air is-${motionStatus.tone}`} role="status" aria-live="polite" aria-atomic="true" aria-label={motionStatus.label} title={`${motionStatus.label} · ${motionStatus.hint}`}>
           <span className="demo-on-air-dot" aria-hidden="true" />
           {c.motionOn ? "ON AIR" : "PAUSED"}
         </span>
+        <button aria-label={fullscreen ? "전체 화면 종료" : "전체 화면"} title={fullscreen ? "전체 화면 종료" : "전체 화면"} aria-pressed={fullscreen} onClick={() => void toggleFullscreen()}>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d={fullscreen ? "M4 9h5V4m6 0v5h5M4 15h5v5m6 0v-5h5" : "M9 4H4v5m11-5h5v5M4 15v5h5m6 0h5v-5"} /></svg>
+          <span className="demo-action-label">{fullscreen ? "전체 화면 종료" : "전체 화면"}</span>
+        </button>
       </div>
       <p className="demo-control-status">방향키 / Home / End</p>
     </footer>
